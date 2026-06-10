@@ -1,0 +1,36 @@
+url: https://adrientaudiere.github.io/ggplotpq/
+
+template:
+  package: ggplotpq
+
+reference:
+  - title: "Migration from MiscMetabar"
+    desc: "Functions migrated from MiscMetabar that operate on a single phyloseq object."
+    contents:
+      - wheat_plot
+      - reorder_distinct_colors
+      - plot_tax_pq_count
+  - title: "Migration from taxinfo"
+    desc: "Theme and palette helpers migrated from taxinfo."
+    contents:
+      - theme_idest
+      - idest_pal
+      - idest_colors
+      - scale_color_idest_c
+      - scale_fill_idest_c
+      - scale_color_idest_d
+      - scale_fill_idest_d
+  - title: "New visualisation functions"
+    desc: "Pure-ggplot2 helpers for phyloseq objects (geoms, themes, scales, palettes)."
+  - title: "New single-phyloseq analysis wrappers"
+    desc: "Analysis wrappers that ship a ggplot (the analysis lives here, the plot is the deliverable)."
+
+navbar:
+  structure:
+    left:
+      - home
+      - reference
+      - articles
+      - news
+    right:
+      - github

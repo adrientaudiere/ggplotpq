@@ -1,0 +1,7 @@
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^cran-comments\.md$
+^CLAUDE\.md$
+^\.claude$
+^LICENSE\.md$

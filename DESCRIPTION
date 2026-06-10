@@ -1,0 +1,42 @@
+Package: ggplotpq
+Title: 'ggplot2' Visualisation Helpers for 'phyloseq' Objects
+Version: 0.0.0.9000
+Authors@R:
+    person("Adrien", "Taudière", , "adrien.taudiere@zaclys.net", role = c("aut", "cre", "cph"),
+           comment = c(ORCID = "0000-0003-1088-1182"))
+Description: A 'ggplot2'-based visualisation layer for 'phyloseq' objects
+    within the 'pqverse' ecosystem. Provides pure-ggplot2 helpers
+    (geoms, themes, scales, color/palette management) and single-phyloseq
+    ggplot wrappers migrated from 'MiscMetabar' and 'comparpq'. Pure
+    rendering only: analysis methods that produce a plot as a side-effect
+    belong in 'netaipq'; cross-package comparators belong in 'comparpq'.
+License: MIT + file LICENSE
+URL: https://adrientaudiere.github.io/ggplotpq/,
+    https://github.com/adrientaudiere/ggplotpq
+BugReports: https://github.com/adrientaudiere/ggplotpq/issues
+Depends:
+    R (>= 4.1.0),
+    phyloseq,
+    ggplot2 (>= 3.5.0),
+    MiscMetabar
+Imports:
+    cli,
+    dplyr,
+    lifecycle,
+    methods,
+    rlang,
+    stats,
+    tibble,
+    utils
+Suggests:
+    earthtones,
+    ggtern,
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Encoding: UTF-8
+VignetteBuilder: knitr
+Roxygen: list(markdown = TRUE)
+RdMacros: lifecycle
+Config/roxygen2/version: 8.0.0
