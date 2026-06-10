@@ -9,7 +9,7 @@ reference:
     contents:
       - wheat_plot
       - reorder_distinct_colors
-      - plot_tax_pq_count
+      - plot_tax_count_pq
   - title: "Migration from taxinfo"
     desc: "Theme and palette helpers migrated from taxinfo."
     contents:
@@ -22,6 +22,12 @@ reference:
       - scale_fill_idest_d
   - title: "New visualisation functions"
     desc: "Pure-ggplot2 helpers for phyloseq objects (geoms, themes, scales, palettes)."
+    contents:
+      - plot_sample_depth_pq
+      - plot_taxa_heatmap_pq
+      - theme_pq_minimal
+      - scale_color_pq_discrete
+      - scale_fill_pq_discrete
   - title: "New single-phyloseq analysis wrappers"
     desc: "Analysis wrappers that ship a ggplot (the analysis lives here, the plot is the deliverable)."
 

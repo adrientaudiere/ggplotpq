@@ -44,14 +44,14 @@
 #' @examples
 #' \donttest{
 #' data(data_fungi_sp_known, package = "MiscMetabar")
-#' plot_tax_pq_count(
+#' plot_tax_count_pq(
 #'   data_fungi_sp_known,
 #'   "Time",
 #'   merge_sample_by = "Time",
 #'   taxa_fill = "Class"
 #' )
 #' }
-plot_tax_pq_count <- function(
+plot_tax_count_pq <- function(
   physeq,
   fact = NULL,
   merge_sample_by = NULL,

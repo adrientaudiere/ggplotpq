@@ -1,9 +1,9 @@
-test_that("plot_tax_pq_count returns a ggplot object", {
+test_that("plot_tax_count_pq returns a ggplot object", {
   skip_if_not_installed("MiscMetabar")
   skip_if_not_installed("phyloseq")
   data(data_fungi_sp_known, package = "MiscMetabar")
 
-  p <- plot_tax_pq_count(
+  p <- plot_tax_count_pq(
     data_fungi_sp_known,
     fact = "Time",
     merge_sample_by = "Time",
@@ -12,12 +12,12 @@ test_that("plot_tax_pq_count returns a ggplot object", {
   expect_s3_class(p, "ggplot")
 })
 
-test_that("plot_tax_pq_count uses counts (non-proportional y)", {
+test_that("plot_tax_count_pq uses counts (non-proportional y)", {
   skip_if_not_installed("MiscMetabar")
   skip_if_not_installed("phyloseq")
   data(data_fungi_sp_known, package = "MiscMetabar")
 
-  p <- plot_tax_pq_count(
+  p <- plot_tax_count_pq(
     data_fungi_sp_known,
     fact = "Time",
     merge_sample_by = "Time",
@@ -28,24 +28,24 @@ test_that("plot_tax_pq_count uses counts (non-proportional y)", {
   expect_gt(max(built$data[[1]]$y, na.rm = TRUE), 1)
 })
 
-test_that("plot_tax_pq_count aborts when fact is NULL", {
+test_that("plot_tax_count_pq aborts when fact is NULL", {
   skip_if_not_installed("MiscMetabar")
   skip_if_not_installed("phyloseq")
   data(data_fungi_sp_known, package = "MiscMetabar")
 
   expect_error(
-    plot_tax_pq_count(data_fungi_sp_known, fact = NULL),
+    plot_tax_count_pq(data_fungi_sp_known, fact = NULL),
     "fact.* required"
   )
 })
 
-test_that("plot_tax_pq_count aborts on missing taxonomic rank", {
+test_that("plot_tax_count_pq aborts on missing taxonomic rank", {
   skip_if_not_installed("MiscMetabar")
   skip_if_not_installed("phyloseq")
   data(data_fungi_sp_known, package = "MiscMetabar")
 
   expect_error(
-    plot_tax_pq_count(
+    plot_tax_count_pq(
       data_fungi_sp_known,
       fact = "Time",
       merge_sample_by = "Time",
@@ -55,12 +55,12 @@ test_that("plot_tax_pq_count aborts on missing taxonomic rank", {
   )
 })
 
-test_that("plot_tax_pq_count supports type='nb_taxa'", {
+test_that("plot_tax_count_pq supports type='nb_taxa'", {
   skip_if_not_installed("MiscMetabar")
   skip_if_not_installed("phyloseq")
   data(data_fungi_sp_known, package = "MiscMetabar")
 
-  p <- plot_tax_pq_count(
+  p <- plot_tax_count_pq(
     data_fungi_sp_known,
     fact = "Time",
     merge_sample_by = "Time",
