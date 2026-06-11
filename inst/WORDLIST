@@ -1,9 +1,12 @@
 ALDEx
 ASV
+Armstrong
 Brettel
 Colour
 DAGs
 Diaconis
+EPSG
+Finetti
 Fira
 Hokusai
 Hokusai2
@@ -23,6 +26,7 @@ Roboto
 Rudis
 Sidhu
 Taudiere
+VIS
 Visualisation
 aPCoA
 aesthetics
@@ -33,12 +37,15 @@ boB
 brewer
 cc
 cccccc
+centred
 colour
 comparators
 comparpq
 customisation
+de
 deutan
 deuteranopia
+directionality
 discrete
 fill
 font
@@ -54,6 +61,7 @@ hrbrthemes
 idest
 ip
 jk
+labelling
 levine
 libertine
 lightgrey
@@ -62,6 +70,7 @@ linewidth
 linewidths
 luminance
 maximise
+metres
 miscmetabar
 moMA
 nb
@@ -77,3 +86,6 @@ steelblue
 tidypq
 value
 visualisation
+visualises
+zanarmstrong
+zanarmstrong's

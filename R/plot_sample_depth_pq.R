@@ -14,7 +14,7 @@
 #' @param physeq (required) A [phyloseq::phyloseq-class] object.
 #' @param geom (character, default "bar") One of `"bar"` (a single
 #'   bar per sample) or `"density"` (a smoothed density estimate).
-#' @param color_by (character, default NULL) Optional name of a column
+#' @param color_fac (character, default NULL) Optional name of a column
 #'   in [phyloseq::sample_data()] to color the bars by. Ignored when
 #'   `geom = "density"`.
 #' @param threshold (numeric, default NULL) Optional horizontal
@@ -35,12 +35,12 @@
 #' data(data_fungi_mini, package = "MiscMetabar")
 #' plot_sample_depth_pq(data_fungi_mini)
 #' plot_sample_depth_pq(data_fungi_mini, geom = "density", log10 = TRUE)
-#' plot_sample_depth_pq(data_fungi_mini, color_by = "Height", sort = TRUE)
+#' plot_sample_depth_pq(data_fungi_mini, color_fac = "Height", sort = TRUE)
 #' }
 plot_sample_depth_pq <- function(
   physeq,
   geom = c("bar", "density"),
-  color_by = NULL,
+  color_fac = NULL,
   threshold = NULL,
   log10 = FALSE,
   sort = FALSE
@@ -65,18 +65,18 @@ plot_sample_depth_pq <- function(
     stringsAsFactors = FALSE
   )
 
-  if (!is.null(color_by)) {
-    if (!color_by %in% colnames(phyloseq::sample_data(physeq))) {
+  if (!is.null(color_fac)) {
+    if (!color_fac %in% colnames(phyloseq::sample_data(physeq))) {
       cli::cli_abort(
-        "{.arg color_by} = {.val {color_by}} not found in sample_data."
+        "{.arg color_fac} = {.val {color_fac}} not found in sample_data."
       )
     }
-    color_vec <- phyloseq::sample_data(physeq)[[color_by]]
+    color_vec <- phyloseq::sample_data(physeq)[[color_fac]]
     color_vec <- color_vec[match(
       df$Sample,
       rownames(phyloseq::sample_data(physeq))
     )]
-    df[[color_by]] <- color_vec
+    df[[color_fac]] <- color_vec
   }
 
   if (sort) {
@@ -117,7 +117,7 @@ plot_sample_depth_pq <- function(
     )
   ) +
     geom_col(
-      fill = if (is.null(color_by)) "steelblue" else NULL
+      fill = if (is.null(color_fac)) "steelblue" else NULL
     ) +
     labs(
       x = NULL,
@@ -127,11 +127,11 @@ plot_sample_depth_pq <- function(
     theme_minimal() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
-  if (!is.null(color_by)) {
+  if (!is.null(color_fac)) {
     p <- p +
-      ggplot2::aes(fill = .data[[color_by]]) +
+      ggplot2::aes(fill = .data[[color_fac]]) +
       ggplot2::geom_col() +
-      ggplot2::labs(fill = color_by)
+      ggplot2::labs(fill = color_fac)
   }
 
   if (log10) {

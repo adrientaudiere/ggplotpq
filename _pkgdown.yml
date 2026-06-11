@@ -10,6 +10,10 @@ reference:
       - wheat_plot
       - reorder_distinct_colors
       - plot_tax_count_pq
+  - title: "Migration from comparpq"
+    desc: "Functions migrated from comparpq (single-phyloseq variant)."
+    contents:
+      - gg_bubbles_pq
   - title: "Migration from taxinfo"
     desc: "Theme and palette helpers migrated from taxinfo."
     contents:
@@ -23,11 +27,14 @@ reference:
   - title: "New visualisation functions"
     desc: "Pure-ggplot2 helpers for phyloseq objects (geoms, themes, scales, palettes)."
     contents:
+      - comet_pq
+      - palette_earthtones
       - plot_sample_depth_pq
       - plot_taxa_heatmap_pq
-      - theme_pq_minimal
       - scale_color_pq_discrete
       - scale_fill_pq_discrete
+      - ternary_pq
+      - theme_pq_minimal
   - title: "New single-phyloseq analysis wrappers"
     desc: "Analysis wrappers that ship a ggplot (the analysis lives here, the plot is the deliverable)."
 
