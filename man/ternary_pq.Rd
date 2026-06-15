@@ -6,12 +6,12 @@
 \usage{
 ternary_pq(
   physeq,
-  group,
+  fact,
   level_order = NULL,
   raw = FALSE,
   normalize_groups = TRUE,
-  color_by = NULL,
-  size_by = c("abundance", "log2_abundance", "equal"),
+  color_rank = NULL,
+  size_by = c("abundance", "log10_abundance", "equal"),
   label_by = NULL,
   label_size = 2.5,
   add_grid = TRUE,
@@ -21,7 +21,7 @@ ternary_pq(
 \arguments{
 \item{physeq}{(required) A \link[phyloseq:phyloseq-class]{phyloseq::phyloseq} object.}
 
-\item{group}{(required) Either a single character string matching a
+\item{fact}{(required) Either a single character string matching a
 variable name in \code{sample_data(physeq)}, or a factor of length
 \code{nsamples(physeq)}. Must have exactly 3 (ternary) or 4 (diamond) levels.}
 
@@ -35,11 +35,11 @@ instead of relative abundances.}
 \item{normalize_groups}{(logical, default \code{TRUE}) If \code{TRUE} (and \code{raw = FALSE}), each group is given equal weight regardless of its sample count.
 If \code{FALSE}, weight is proportional to sample count.}
 
-\item{color_by}{(character, default \code{NULL}) Column name from \verb{@tax_table}
+\item{color_rank}{(character, default \code{NULL}) Column name from \verb{@tax_table}
 to map to point colour.}
 
 \item{size_by}{(character, default \code{"abundance"}) How to scale point size.
-One of \code{"abundance"} (overall relative abundance), \code{"log2_abundance"}, or
+One of \code{"abundance"} (overall relative abundance), \code{"log10_abundance"}, or
 \code{"equal"} (all the same size).}
 
 \item{label_by}{(character, default \code{NULL}) Column name from \verb{@tax_table}
@@ -82,27 +82,15 @@ public domain (de Finetti 1926; see also Armstrong 2014, IEEE VIS).
 \examples{
 \donttest{
 data(data_fungi_mini, package = "MiscMetabar")
-# Subset to samples with non-NA Height (3 levels: Low, High + one more)
-pq3 <- phyloseq::subset_samples(
-  data_fungi_mini,
-  !is.na(Height) & Height \%in\% c("Low", "High")
-)
-# Need 3-level group; use Time as example (if it has 3 levels)
-time_lvls <- unique(na.omit(
-  as.character(phyloseq::sample_data(data_fungi_mini)[["Time"]])
-))
-if (length(time_lvls) == 3) {
-  pq_t <- phyloseq::subset_samples(
-    data_fungi_mini,
-    !is.na(Time)
-  )
-  ternary_pq(pq_t, group = "Time")
-}
+# Ternary plot: Height has 3 levels (High, Low, Middle)
+ternary_pq(data_fungi_mini, fact = "Height", color_rank = "Class")
+# Diamond plot: Time has 4 levels (0, 5, 10, 15)
+ternary_pq(data_fungi_mini, fact = "Time")
 }
 
 \dontrun{
-ternary_pq(pq_t, group = "Time", color_by = "Family", add_grid = FALSE)
-ternary_pq(pq_t, group = "Time", size_by = "log2_abundance")
+ternary_pq(data_fungi_mini, fact = "Height", color_rank = "Family", add_grid = FALSE)
+ternary_pq(data_fungi_mini, fact = "Height", size_by = "log10_abundance")
 }
 }
 \author{

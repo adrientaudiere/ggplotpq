@@ -87,6 +87,34 @@ theme_idest <- function(
   axis = FALSE,
   ticks = FALSE
 ) {
+  # Fall back to the device default font ("") for any requested family that is
+  # not installed: the hardcoded defaults (Roboto Condensed, Linux Libertine G,
+  # Fira Code) otherwise raise "invalid font type" when the plot is printed on
+  # a machine lacking them (e.g. R CMD check / pkgdown render).
+  available_families <- if (requireNamespace("systemfonts", quietly = TRUE)) {
+    unique(systemfonts::system_fonts()$family)
+  } else {
+    NULL
+  }
+  resolve_font <- function(family) {
+    if (!nzchar(family) || is.null(available_families)) {
+      return(family)
+    }
+    if (!family %in% available_families) {
+      return("")
+    }
+    family
+  }
+  sans_family <- resolve_font(sans_family)
+  serif_family <- resolve_font(serif_family)
+  mono_family <- resolve_font(mono_family)
+  plot_title_family <- resolve_font(plot_title_family)
+  subtitle_family <- resolve_font(subtitle_family)
+  strip_text_family <- resolve_font(strip_text_family)
+  caption_family <- resolve_font(caption_family)
+  axis_text_family <- resolve_font(axis_text_family)
+  axis_title_family <- resolve_font(axis_title_family)
+
   ret <- ggplot2::theme_minimal(
     base_family = sans_family,
     base_size = base_size
