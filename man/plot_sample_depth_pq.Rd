@@ -7,7 +7,7 @@
 plot_sample_depth_pq(
   physeq,
   geom = c("bar", "density"),
-  color_by = NULL,
+  color_fac = NULL,
   threshold = NULL,
   log10 = FALSE,
   sort = FALSE
@@ -19,7 +19,7 @@ plot_sample_depth_pq(
 \item{geom}{(character, default "bar") One of \code{"bar"} (a single
 bar per sample) or \code{"density"} (a smoothed density estimate).}
 
-\item{color_by}{(character, default NULL) Optional name of a column
+\item{color_fac}{(character, default NULL) Optional name of a column
 in \code{\link[phyloseq:sample_data]{phyloseq::sample_data()}} to color the bars by. Ignored when
 \code{geom = "density"}.}
 
@@ -55,7 +55,7 @@ cutoff visible.
 data(data_fungi_mini, package = "MiscMetabar")
 plot_sample_depth_pq(data_fungi_mini)
 plot_sample_depth_pq(data_fungi_mini, geom = "density", log10 = TRUE)
-plot_sample_depth_pq(data_fungi_mini, color_by = "Height", sort = TRUE)
+plot_sample_depth_pq(data_fungi_mini, color_fac = "Height", sort = TRUE)
 }
 }
 \author{

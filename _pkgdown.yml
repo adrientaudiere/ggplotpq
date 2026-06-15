@@ -28,11 +28,16 @@ reference:
     desc: "Pure-ggplot2 helpers for phyloseq objects (geoms, themes, scales, palettes)."
     contents:
       - comet_pq
+      - community_sharing_plot
+      - community_sharing_barplot
+      - make_sharing_metric
+      - default_sharing_metrics
       - palette_earthtones
       - plot_sample_depth_pq
       - plot_taxa_heatmap_pq
       - scale_color_pq_discrete
       - scale_fill_pq_discrete
+      - ternary_biomarker_pq
       - ternary_pq
       - theme_pq_minimal
   - title: "New single-phyloseq analysis wrappers"
@@ -42,6 +47,7 @@ navbar:
   structure:
     left:
       - home
+      - intro
       - reference
       - articles
       - news
