@@ -185,6 +185,7 @@ reorder_distinct_colors <- function(
 }
 
 #' @exportS3Method ggplot2::ggplot_add
+#' @keywords internal
 ggplot_add.reorder_distinct_colors_spec <- function(object, plot, ...) {
   reorder_distinct_colors(
     p = plot,
