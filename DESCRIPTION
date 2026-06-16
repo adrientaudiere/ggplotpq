@@ -10,7 +10,7 @@ Description: A 'ggplot2'-based visualisation layer for 'phyloseq' objects
     ggplot wrappers migrated from 'MiscMetabar' and 'comparpq'. Pure
     rendering only: analysis methods that produce a plot as a side-effect
     belong in 'netaipq'; cross-package comparators belong in 'comparpq'.
-License: MIT + file LICENSE
+License: AGPL-3
 URL: https://adrientaudiere.github.io/ggplotpq/,
     https://github.com/adrientaudiere/ggplotpq
 BugReports: https://github.com/adrientaudiere/ggplotpq/issues
