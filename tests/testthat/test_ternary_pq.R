@@ -16,27 +16,27 @@ test_that(".ternary_norm produces correct structure for 3 groups", {
 })
 
 test_that("ternary_pq returns a ggplot for 3 groups", {
-  p <- ternary_pq(pq_height, group = "Height")
+  p <- ternary_pq(pq_height, fact = "Height")
   expect_s3_class(p, "ggplot")
 })
 
 test_that("ternary_pq works with color_by", {
-  p <- ternary_pq(pq_height, group = "Height", color_by = "Class")
+  p <- ternary_pq(pq_height, fact = "Height", color_by = "Class")
   expect_s3_class(p, "ggplot")
 })
 
 test_that("ternary_pq works without grid", {
-  p <- ternary_pq(pq_height, group = "Height", add_grid = FALSE)
+  p <- ternary_pq(pq_height, fact = "Height", add_grid = FALSE)
   expect_s3_class(p, "ggplot")
 })
 
 test_that("ternary_pq works with size_by log2_abundance", {
-  p <- ternary_pq(pq_height, group = "Height", size_by = "log2_abundance")
+  p <- ternary_pq(pq_height, fact = "Height", size_by = "log2_abundance")
   expect_s3_class(p, "ggplot")
 })
 
 test_that("ternary_pq works with size_by equal", {
-  p <- ternary_pq(pq_height, group = "Height", size_by = "equal")
+  p <- ternary_pq(pq_height, fact = "Height", size_by = "equal")
   expect_s3_class(p, "ggplot")
 })
 
@@ -47,7 +47,7 @@ test_that("ternary_pq aborts with wrong number of group levels (2)", {
     !is.na(sd2[["Height"]])]
   pq2 <- phyloseq::prune_samples(keep2, data_fungi_mini)
   expect_error(
-    ternary_pq(pq2, group = "Height"),
+    ternary_pq(pq2, fact = "Height"),
     "exactly 3 or 4"
   )
 })
@@ -68,6 +68,6 @@ test_that("ternary_pq returns a ggplot for 4 groups (diamond)", {
     !is.na(as.data.frame(phyloseq::sample_data(data_fungi_mini))[["Time"]])
   ]
   pq4 <- phyloseq::prune_samples(keep_t, data_fungi_mini)
-  p <- ternary_pq(pq4, group = "Time")
+  p <- ternary_pq(pq4, fact = "Time")
   expect_s3_class(p, "ggplot")
 })

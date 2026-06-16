@@ -91,7 +91,7 @@ theme_idest(
 
 \item{caption_margin}{Margin above caption (default is 10).}
 
-\item{axis_text_size}{Font size for axis text (default is 80\\% of base_size).}
+\item{axis_text_size}{Font size for axis text (default is 80\% of base_size).}
 
 \item{axis_text_family}{Font family for axis text (default is sans_family).}
 

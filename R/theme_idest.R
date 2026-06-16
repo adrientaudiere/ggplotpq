@@ -30,7 +30,7 @@
 #' @param caption_size Font size for caption (default is 9).
 #' @param caption_face Font face for caption (default is "plain").
 #' @param caption_margin Margin above caption (default is 10).
-#' @param axis_text_size Font size for axis text (default is 80\% of base_size).
+#' @param axis_text_size Font size for axis text (default is 80% of base_size).
 #' @param axis_text_family  Font family for axis text (default is sans_family).
 #' @param axis_title_family Font family for axis titles (default is mono_family).
 #' @param axis_title_size Font size for axis titles (default is 12).

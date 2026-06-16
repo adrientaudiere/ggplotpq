@@ -31,12 +31,12 @@ test_that("plot_sample_depth_pq supports log10", {
   expect_s3_class(p_dens, "ggplot")
 })
 
-test_that("plot_sample_depth_pq supports color_by", {
+test_that("plot_sample_depth_pq supports color_fac", {
   skip_if_not_installed("MiscMetabar")
   skip_if_not_installed("phyloseq")
   data(data_fungi_mini, package = "MiscMetabar")
 
-  p <- plot_sample_depth_pq(data_fungi_mini, color_by = "Height")
+  p <- plot_sample_depth_pq(data_fungi_mini, color_fac = "Height")
   expect_s3_class(p, "ggplot")
   expect_equal(p$labels$fill, "Height")
 })
@@ -60,13 +60,13 @@ test_that("plot_sample_depth_pq supports sort and threshold", {
   )
 })
 
-test_that("plot_sample_depth_pq aborts on bad color_by", {
+test_that("plot_sample_depth_pq aborts on bad color_fac", {
   skip_if_not_installed("MiscMetabar")
   skip_if_not_installed("phyloseq")
   data(data_fungi_mini, package = "MiscMetabar")
 
   expect_error(
-    plot_sample_depth_pq(data_fungi_mini, color_by = "NotACol"),
+    plot_sample_depth_pq(data_fungi_mini, color_fac = "NotACol"),
     "not found in sample_data"
   )
 })
