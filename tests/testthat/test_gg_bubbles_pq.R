@@ -33,7 +33,11 @@ test_that("gg_bubbles_pq facet_by works", {
 })
 
 test_that("gg_bubbles_pq return_dataframe returns a data.frame", {
-  df <- gg_bubbles_pq(data_fungi_mini, rank_color = "Class", return_dataframe = TRUE)
+  df <- gg_bubbles_pq(
+    data_fungi_mini,
+    rank_color = "Class",
+    return_dataframe = TRUE
+  )
   expect_s3_class(df, "data.frame")
   expect_true("value" %in% names(df))
   expect_true("rank_value_color" %in% names(df))
@@ -64,7 +68,11 @@ test_that("gg_bubbles_pq diff_contour without facet_by warns and falls back", {
 })
 
 test_that("gg_bubbles_pq log1p transform works", {
-  p <- gg_bubbles_pq(data_fungi_mini, rank_color = "Class", log1ptransform = TRUE)
+  p <- gg_bubbles_pq(
+    data_fungi_mini,
+    rank_color = "Class",
+    log1ptransform = TRUE
+  )
   expect_s3_class(p, "ggplot")
 })
 

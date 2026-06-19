@@ -1,7 +1,11 @@
 url: https://adrientaudiere.github.io/ggplotpq/
-
 template:
-  package: ggplotpq
+  bootstrap: 5
+  bslib:
+    bg: "#dccfe1"
+    fg: "#16091f"
+    primary: "#0072B2"
+    secondary: "#a3345a"
 
 reference:
   - title: "Migration from MiscMetabar"

@@ -145,7 +145,7 @@ utils::globalVariables("index")
 #'   label_by = "id", label_nudge_x = 0.05,
 #'   step_label_by = "time", step_label_size = 2
 #' )
-#' 
+#'
 #' \donttest{
 #' # 3. From a phyloseq object: fungal diversity along tree height
 #' #    (tail = Low, tip = High). In data_fungi_mini each tree is sampled at
@@ -164,7 +164,7 @@ utils::globalVariables("index")
 #'   color_by = "Height_ord", label_by = "Tree_name",
 #'   label_nudge_x = 0.05
 #' )
-#' 
+#'
 #' # 4. Same height modality, but constant colour per comet (by sampling Time).
 #' #    comet_pq requires exactly one row per (id, modality) step, so
 #' #    aggregate first to handle any trees sampled twice at the same height.
@@ -203,7 +203,7 @@ utils::globalVariables("index")
 #'   label_by = "Height_ord",
 #'   label_nudge_x = 0.05
 #' )
-#' 
+#'
 #' }
 
 comet_pq <- function(
@@ -248,7 +248,10 @@ comet_pq <- function(
   }
 
   use_modality <- !is.null(modality)
-  use_wide <- !is.null(x_start) && !is.null(x_end) && !is.null(y_start) && !is.null(y_end)
+  use_wide <- !is.null(x_start) &&
+    !is.null(x_end) &&
+    !is.null(y_start) &&
+    !is.null(y_end)
 
   if (na_rm) {
     if (use_modality) {
@@ -296,7 +299,9 @@ comet_pq <- function(
     needed <- c(x, y, modality, id)
     missing_cols <- needed[!needed %in% names(data)]
     if (length(missing_cols) > 0) {
-      cli::cli_abort("Column{?s} not found in {.arg data}: {.val {missing_cols}}")
+      cli::cli_abort(
+        "Column{?s} not found in {.arg data}: {.val {missing_cols}}"
+      )
     }
     if (!is.ordered(data[[modality]])) {
       cli::cli_abort(
@@ -314,7 +319,8 @@ comet_pq <- function(
     data <- data[order(data[[id]], as.numeric(data[[modality]])), ]
 
     id_level_counts <- tapply(
-      as.character(data[[modality]]), data[[id]],
+      as.character(data[[modality]]),
+      data[[id]],
       function(v) length(unique(v))
     )
     single_point_ids <- names(id_level_counts)[id_level_counts < 2]
@@ -355,12 +361,14 @@ comet_pq <- function(
     use_const_color <- !is.null(color_by) && color_by != modality
     if (use_const_color) {
       first_color <- tapply(
-        as.character(data[[color_by]]), data[[id]],
+        as.character(data[[color_by]]),
+        data[[id]],
         function(x_val) x_val[1]
       )
       data$.colour_const <- first_color[as.character(data[[id]])]
       varying <- names(which(tapply(
-        as.character(data[[color_by]]), data[[id]],
+        as.character(data[[color_by]]),
+        data[[id]],
         function(x_val) length(unique(x_val)) > 1
       )))
       if (length(varying) > 0) {
@@ -400,11 +408,12 @@ comet_pq <- function(
 
     if (use_gradient_color) {
       lw_breaks <- (seq_len(n_levels) - 1) / (n_levels - 1)
-      p <- p + ggplot2::scale_color_viridis_c(
-        breaks = lw_breaks,
-        labels = levels(data[[modality]]),
-        name = modality
-      )
+      p <- p +
+        ggplot2::scale_color_viridis_c(
+          breaks = lw_breaks,
+          labels = levels(data[[modality]]),
+          name = modality
+        )
     } else if (use_const_color) {
       p <- p + ggplot2::scale_color_discrete(name = color_by)
     }
@@ -421,7 +430,8 @@ comet_pq <- function(
           aes_pt$colour <- rlang::sym(".colour_const")
         }
       }
-      p <- p + ggplot2::geom_point(data = tip_data, mapping = aes_pt, size = tip_size)
+      p <- p +
+        ggplot2::geom_point(data = tip_data, mapping = aes_pt, size = tip_size)
     }
 
     if (!is.null(label_by)) {
@@ -458,7 +468,9 @@ comet_pq <- function(
     needed <- c(x_start, x_end, y_start, y_end)
     missing_cols <- needed[!needed %in% names(data)]
     if (length(missing_cols) > 0) {
-      cli::cli_abort("Column{?s} not found in {.arg data}: {.val {missing_cols}}")
+      cli::cli_abort(
+        "Column{?s} not found in {.arg data}: {.val {missing_cols}}"
+      )
     }
 
     aes_link <- ggplot2::aes(

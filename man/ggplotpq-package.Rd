@@ -6,6 +6,8 @@
 \alias{ggplotpq-package}
 \title{ggplotpq: 'ggplot2' Visualisation Helpers for 'phyloseq' Objects}
 \description{
+\if{html}{\figure{logo.svg}{options: style='float: right' alt='logo' width='120'}}
+
 A 'ggplot2'-based visualisation layer for 'phyloseq' objects within the 'pqverse' ecosystem. Provides pure-ggplot2 helpers (geoms, themes, scales, color/palette management) and single-phyloseq ggplot wrappers migrated from 'MiscMetabar' and 'comparpq'. Pure rendering only: analysis methods that produce a plot as a side-effect belong in 'netaipq'; cross-package comparators belong in 'comparpq'.
 }
 \seealso{

@@ -222,7 +222,7 @@ ternary_pq <- function(
   extreme <- attr(dat, "extreme")
   lvl_labels <- attr(dat, "labels")
   physeq <- attr(dat, "physeq")
-  
+
   dat$taxon <- rownames(dat)
 
   if (!is.null(color_rank)) {

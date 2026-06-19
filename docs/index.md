@@ -1,0 +1,38 @@
+# ggplotpq
+
+A ‘ggplot2’-based visualisation layer for ‘phyloseq’ objects, part of
+the ‘pqverse’ ecosystem.
+
+`ggplotpq` is the **ggplot2 visualisation layer** of the pqverse. It
+owns pure ggplot2 helpers (geoms, themes, scales, color/palette
+management) and single-phyloseq ggplot wrappers that previously lived in
+‘MiscMetabar’ or ‘comparpq’.
+
+It is **not** for:
+
+- cross-package multi-phyloseq comparators (those stay in ‘comparpq’),
+- ML / networks / DAGs (those stay in ‘netaipq’),
+- data-structure utilities (those stay in ‘tidypq’).
+
+Genuinely new analysis methods (PLS-DA, aPCoA, Zeta-diversity, LefSe,
+ALDEx2 sensitivity, etc.) belong in ‘netaipq’ — `ggplotpq` may still
+render their plots, but the analysis wrapper itself does not live here.
+
+## Installation
+
+``` r
+
+# install.packages("devtools")
+devtools::install_github("adrientaudiere/ggplotpq")
+```
+
+## Status
+
+Initial development version (0.0.0.9000). No exported functions yet —
+migrations from ‘MiscMetabar’ and ‘comparpq’ land here first (see the
+ROADMAP at <https://github.com/adrientaudiere/pqverse/ROADMAP.md>,
+section `ggplotpq`).
+
+## License
+
+MIT + file LICENSE
