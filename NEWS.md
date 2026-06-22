@@ -1,5 +1,4 @@
-# ggplotpq 0.0.0 (development version)
-
+# ggplotpq 0.0.0
 * `krona_like_pq()` builds Krona-style interactive (D3.js zoomable sunburst or treemap, via `htmlwidgets`) or static (pure ggplot2) taxonomy explorer from a `phyloseq` object, without requiring KronaTools; the interactive widget works on all platforms including Windows, and can be saved as a self-contained `.html` file.
 * Add a "Get started with ggplotpq" vignette and a pkgdown website skeleton.
 * `comet_pq()` draws a comet / tapered-line plot for paired continuous measurements: a linewidth-tapered segment (via `ggforce::geom_link()`) connects the start and end value for each unit, with optional colour, tip-point, and text labels; accepts a data frame or a phyloseq object.
