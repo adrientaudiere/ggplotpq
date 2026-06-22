@@ -36,6 +36,7 @@ reference:
       - community_sharing_barplot
       - make_sharing_metric
       - default_sharing_metrics
+      - krona_like_pq
       - palette_earthtones
       - plot_sample_depth_pq
       - plot_taxa_heatmap_pq
