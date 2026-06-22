@@ -1,4 +1,4 @@
-# ggplotpq (development version)
+# ggplotpq 0.0.0 (development version)
 
 * `krona_like_pq()` builds Krona-style interactive (D3.js zoomable sunburst or treemap, via `htmlwidgets`) or static (pure ggplot2) taxonomy explorer from a `phyloseq` object, without requiring KronaTools; the interactive widget works on all platforms including Windows, and can be saved as a self-contained `.html` file.
 * Add a "Get started with ggplotpq" vignette and a pkgdown website skeleton.
