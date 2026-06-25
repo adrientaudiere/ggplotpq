@@ -49,6 +49,8 @@ reference:
       - theme_pq_minimal
   - title: "New single-phyloseq analysis wrappers"
     desc: "Analysis wrappers that ship a ggplot (the analysis lives here, the plot is the deliverable)."
+    contents:
+      - neg_control_diag_pq
 
 navbar:
   structure:
