@@ -7,7 +7,21 @@ utils::globalVariables(c(
   "color",
   "name",
   "xmid",
-  "ymid"
+  "ymid",
+  "ang",
+  "lab",
+  "pattern_type",
+  "parent_value",
+  "numeric_attr",
+  "y_anchor",
+  "hj",
+  "col",
+  "hj_side",
+  "ang_tang",
+  "y_in",
+  "y_lab",
+  "y0",
+  "y1"
 ))
 
 # ---- weights ---------------------------------------------------------------
@@ -50,6 +64,19 @@ utils::globalVariables(c(
       cli::cli_abort(
         "{.arg weight_by} numeric vector must have length ntaxa ({length(tn)}), not {length(weight_by)}."
       )
+    }
+    # When named, align to taxa_names() rather than trusting positional order.
+    # A names/taxa mismatch is almost always a silent bug, so abort.
+    if (!is.null(names(weight_by))) {
+      if (!setequal(names(weight_by), tn)) {
+        cli::cli_abort(
+          c(
+            "{.arg weight_by} has names that do not match {.fn taxa_names}.",
+            "i" = "Provide an unnamed vector aligned to {.fn taxa_names} order, or names covering exactly the taxa."
+          )
+        )
+      }
+      weight_by <- weight_by[tn]
     }
     if (anyNA(weight_by) || any(weight_by < 0)) {
       cli::cli_warn(
@@ -103,13 +130,118 @@ utils::globalVariables(c(
   sprintf("#%02X%02X%02X", round(r * 255), round(g * 255), round(b * 255))
 }
 
+# ---- Default to classical ranks when "All" is requested --------------------
+# Returns the intersection of standard taxonomic ranks with the available ones.
+# Falls back to all available ranks when fewer than 2 classical ranks are found.
+.default_ranks <- function(all_ranks) {
+  classical <- c(
+    "Kingdom",
+    "Phylum",
+    "Class",
+    "Order",
+    "Family",
+    "Genus",
+    "Species"
+  )
+  found <- classical[classical %in% all_ranks]
+  if (length(found) >= 2) {
+    found
+  } else {
+    all_ranks
+  }
+}
+
+# ---- Nestedness check: warn when a taxon appears under multiple parents -----
+.check_nestedness <- function(df, ranks) {
+  if (length(ranks) < 2) {
+    return(invisible(NULL))
+  }
+  offenders <- character(0)
+  for (i in seq(2, length(ranks))) {
+    child_col <- ranks[i]
+    parent_col <- ranks[i - 1]
+    sub <- df[, c(parent_col, child_col), drop = FALSE]
+    sub <- sub[
+      !is.na(sub[[child_col]]) &
+        sub[[child_col]] != "" &
+        !is.na(sub[[parent_col]]) &
+        sub[[parent_col]] != "",
+      ,
+      drop = FALSE
+    ]
+    if (nrow(sub) == 0) {
+      next
+    }
+    n_parents <- tapply(
+      sub[[parent_col]],
+      sub[[child_col]],
+      function(x) length(unique(x))
+    )
+    multi <- names(which(n_parents > 1))
+    if (length(multi) > 0) {
+      head5 <- utils::head(multi, 5)
+      suffix <- if (length(multi) > 5) {
+        paste0(" ... (", length(multi), " total)")
+      } else {
+        ""
+      }
+      offenders <- c(
+        offenders,
+        paste0(child_col, ": ", paste(head5, collapse = ", "), suffix)
+      )
+    }
+  }
+  if (length(offenders) > 0) {
+    cli::cli_warn(
+      c(
+        "!" = "Taxonomy is not strictly nested; the following taxa appear under multiple parents:",
+        stats::setNames(offenders, rep("*", length(offenders))),
+        "i" = "A non-nested {.fn tax_table} may silently mis-aggregate sections."
+      )
+    )
+  }
+  invisible(NULL)
+}
+
+# ---- Extend a terminal section down to the deepest rank --------------------
+# Builds a chain of identically-named nested nodes from `depth` to `max_depth`
+# so that a section that terminates early (an "unassigned" taxon, or an
+# aggregated "n more" group) visually fills every remaining ring out to the
+# leaf rank. The repeated segments are merged into one borderless wedge with a
+# single label at draw time (see `.merge_fill_chains` / the JS renderer).
+.fill_chain <- function(
+  name,
+  value,
+  depth,
+  max_depth,
+  numeric_attr,
+  is_aggregate = FALSE
+) {
+  node <- list(
+    name = name,
+    value = value,
+    depth = depth,
+    children = list(),
+    numeric_attr = numeric_attr,
+    is_aggregate = is_aggregate
+  )
+  if (depth < max_depth) {
+    node$children <- list(
+      .fill_chain(name, value, depth + 1, max_depth, numeric_attr, is_aggregate)
+    )
+  }
+  node
+}
+
 # ---- Build nested hierarchy from tax_table + weights -----------------------
 .build_tax_hierarchy <- function(
   df,
   ranks,
   weights,
   depth,
-  add_unassigned_rank
+  add_unassigned_rank,
+  numeric_vals = NULL,
+  fill_unassigned = TRUE
 ) {
   if (nrow(df) == 0) {
     return(NULL)
@@ -125,8 +257,13 @@ utils::globalVariables(c(
     keep <- !na_mask
     df <- df[keep, , drop = FALSE]
     weights <- weights[keep]
+    if (!is.null(numeric_vals)) {
+      numeric_vals <- numeric_vals[keep]
+    }
     values <- values[keep]
-    if (nrow(df) == 0) return(NULL)
+    if (nrow(df) == 0) {
+      return(NULL)
+    }
   } else {
     values[na_mask] <- "unassigned"
   }
@@ -138,31 +275,65 @@ utils::globalVariables(c(
     gname <- names(groups)[i]
     idx <- groups[[i]]
     sub_w <- weights[idx]
+    sub_nv <- if (!is.null(numeric_vals)) numeric_vals[idx] else NULL
+
+    group_numeric <- if (!is.null(sub_nv)) {
+      non_na <- !is.na(sub_nv)
+      if (any(non_na)) {
+        sum(sub_nv[non_na] * sub_w[non_na]) / sum(sub_w[non_na])
+      } else {
+        NA_real_
+      }
+    } else {
+      NULL
+    }
 
     if (gname == "unassigned" || rank_idx == length(ranks)) {
-      children[[i]] <- list(
-        name = gname,
-        value = as.numeric(sum(sub_w)),
-        depth = depth + 1,
-        children = list()
-      )
+      if (
+        gname == "unassigned" && fill_unassigned && rank_idx < length(ranks)
+      ) {
+        # Fill the remaining ranks with a chain of "unassigned" nodes so the
+        # arc reaches the leaf ring instead of stopping where assignment ended.
+        children[[i]] <- .fill_chain(
+          "unassigned",
+          as.numeric(sum(sub_w)),
+          depth + 1,
+          length(ranks),
+          group_numeric,
+          is_aggregate = FALSE
+        )
+      } else {
+        children[[i]] <- list(
+          name = gname,
+          value = as.numeric(sum(sub_w)),
+          depth = depth + 1,
+          children = list(),
+          numeric_attr = group_numeric,
+          is_aggregate = FALSE
+        )
+      }
     } else {
       sub <- .build_tax_hierarchy(
         df[idx, , drop = FALSE],
         ranks,
         sub_w,
         depth + 1,
-        add_unassigned_rank
+        add_unassigned_rank,
+        sub_nv,
+        fill_unassigned
       )
       if (is.null(sub)) {
         children[[i]] <- list(
           name = gname,
           value = as.numeric(sum(sub_w)),
           depth = depth + 1,
-          children = list()
+          children = list(),
+          numeric_attr = group_numeric,
+          is_aggregate = FALSE
         )
       } else {
         sub$name <- gname
+        sub$numeric_attr <- group_numeric
         children[[i]] <- sub
       }
     }
@@ -173,7 +344,141 @@ utils::globalVariables(c(
     return(NULL)
   }
   total <- sum(vapply(children, function(x) x$value, numeric(1)))
-  list(name = "node", value = total, depth = depth, children = children)
+
+  total_numeric <- if (!is.null(numeric_vals)) {
+    w_vals <- vapply(children, function(x) x$value, numeric(1))
+    n_vals <- vapply(
+      children,
+      function(x) {
+        if (!is.null(x$numeric_attr) && !is.na(x$numeric_attr)) {
+          x$numeric_attr
+        } else {
+          NA_real_
+        }
+      },
+      numeric(1)
+    )
+    non_na <- !is.na(n_vals)
+    if (any(non_na)) {
+      sum(n_vals[non_na] * w_vals[non_na]) / sum(w_vals[non_na])
+    } else {
+      NA_real_
+    }
+  } else {
+    NULL
+  }
+
+  list(
+    name = "node",
+    value = total,
+    depth = depth,
+    children = children,
+    numeric_attr = total_numeric,
+    is_aggregate = FALSE
+  )
+}
+
+# ---- Collapse uninformative single-child levels ----------------------------
+# Removes internal nodes with exactly one child that itself has children.
+# Leaf nodes are always kept. The layout functions use the passed depth
+# parameter (not node$depth), so depths auto-correct after collapsing.
+# Each surviving node records `collapsed_path`: the names of the ancestor
+# ranks that were skipped to reach it (top-down, excluding its own name), so
+# the full taxonomic path can be shown when `show_collapsed_path = TRUE`.
+.collapse_single_children <- function(node) {
+  if (length(node$children) == 0) {
+    return(node)
+  }
+  node$children <- lapply(node$children, .collapse_single_children)
+  new_children <- list()
+  for (child in node$children) {
+    only_child <- if (length(child$children) == 1) {
+      child$children[[1]]
+    } else {
+      NULL
+    }
+    # Collapse single-child internal nodes, but never an identically-named
+    # fill chain (e.g. unassigned/unassigned/...), which must keep spanning to
+    # the leaf ring.
+    if (
+      !is.null(only_child) &&
+        length(only_child$children) > 0 &&
+        !identical(only_child$name, child$name)
+    ) {
+      only_child$collapsed_path <- c(
+        child$collapsed_path,
+        child$name,
+        only_child$collapsed_path
+      )
+      new_children <- c(new_children, list(only_child))
+    } else {
+      new_children <- c(new_children, list(child))
+    }
+  }
+  node$children <- new_children
+  node
+}
+
+# ---- Merge low-abundance siblings into an "n more" aggregate ---------------
+# When a section's proportion of its parent falls below min_prop, it is merged
+# with other small siblings into a single "{n} more" node. Only merges when at
+# least 2 siblings are below the threshold. When `fill` is TRUE the aggregate
+# is extended as a chain out to `max_depth` (the leaf rank), matching
+# `fill_unassigned`, so the whole circle is filled.
+.merge_low_abundance <- function(
+  node,
+  min_prop,
+  max_depth = NULL,
+  fill = TRUE
+) {
+  if (length(node$children) == 0) {
+    return(node)
+  }
+  node$children <- lapply(node$children, function(child) {
+    .merge_low_abundance(child, min_prop, max_depth, fill)
+  })
+  total <- sum(vapply(node$children, function(x) x$value, numeric(1)))
+  if (total <= 0) {
+    return(node)
+  }
+  keep <- list()
+  small <- list()
+  for (child in node$children) {
+    if (child$value / total < min_prop) {
+      small <- c(small, list(child))
+    } else {
+      keep <- c(keep, list(child))
+    }
+  }
+  if (length(small) >= 2) {
+    small_total <- sum(vapply(small, function(x) x$value, numeric(1)))
+    agg_name <- paste0(length(small), " more")
+    agg_depth <- node$depth + 1
+    if (fill && !is.null(max_depth) && agg_depth < max_depth) {
+      aggregate <- .fill_chain(
+        agg_name,
+        as.numeric(small_total),
+        agg_depth,
+        max_depth,
+        NULL,
+        is_aggregate = TRUE
+      )
+    } else {
+      aggregate <- list(
+        name = agg_name,
+        value = as.numeric(small_total),
+        depth = agg_depth,
+        children = list(),
+        numeric_attr = NULL,
+        is_aggregate = TRUE
+      )
+    }
+    keep <- c(keep, list(aggregate))
+  } else {
+    keep <- c(keep, small)
+  }
+  node$children <- keep
+  node
 }
 
 # ---- Collect (name, total value) at a given depth for the hue map ----------
@@ -202,37 +507,26 @@ utils::globalVariables(c(
   stats::setNames(as.list(hues), names(totals))
 }
 
-# ---- Krona-style palette: child inherits parent hue + lightness shift ------
+# ---- Wide-spread palette: siblings fan across a hue band -------------------
 .krona_palette <- function(
   node,
   color_depth,
   hue_map,
   hue = NULL,
-  L = 0.55,
+  band = 360,
+  L = 0.58,
   depth = 0
 ) {
-  if (depth == 0) {
-    for (i in seq_along(node$children)) {
-      node$children[[i]] <- .krona_palette(
-        node$children[[i]],
-        color_depth,
-        hue_map,
-        hue = NULL,
-        L = 0.55,
-        depth = 1
-      )
-    }
-    return(node)
-  }
   if (depth < color_depth) {
-    node$color <- "#cccccc"
+    node$color <- "#cfcfcf"
     for (i in seq_along(node$children)) {
       node$children[[i]] <- .krona_palette(
         node$children[[i]],
         color_depth,
         hue_map,
         hue = NULL,
-        L = 0.55,
+        band = 360,
+        L = L,
         depth = depth + 1
       )
     }
@@ -243,34 +537,118 @@ utils::globalVariables(c(
     if (is.null(hue)) {
       hue <- 0
     }
-    L <- 0.58
+    k <- length(hue_map)
+    band <- if (k <= 1) {
+      320
+    } else {
+      (360 / k) * 0.82
+    }
   }
-  node$color <- .hsl_to_hex(hue, 0.65, L)
+  node$color <- .hsl_to_hex(hue, 0.7, max(0.42, min(0.66, L)))
   n <- length(node$children)
-  for (i in seq_len(n)) {
-    h_child <- hue + ((i - 1) - (n - 1) / 2) * 7
-    L_child <- max(0.22, min(0.75, L * 0.88))
-    node$children[[i]] <- .krona_palette(
-      node$children[[i]],
-      color_depth,
-      hue_map,
-      hue = h_child,
-      L = L_child,
-      depth = depth + 1
-    )
+  if (n > 0) {
+    child_band <- band * 0.72
+    l_child <- max(0.42, min(0.66, L - 0.03))
+    for (i in seq_len(n)) {
+      frac <- if (n == 1) {
+        0
+      } else {
+        (i - 1) / (n - 1) - 0.5
+      }
+      node$children[[i]] <- .krona_palette(
+        node$children[[i]],
+        color_depth,
+        hue_map,
+        hue = hue + frac * child_band,
+        band = child_band,
+        L = l_child,
+        depth = depth + 1
+      )
+    }
+  }
+  node
+}
+
+# ---- Gradient palette for numeric color_by attributes ----------------------
+# Maps each node's numeric_attr to a continuous colour via scale_fn.
+.krona_gradient_palette <- function(node, scale_fn, depth = 0) {
+  if (!is.null(node$numeric_attr) && !is.na(node$numeric_attr)) {
+    node$color <- scale_fn(node$numeric_attr)
+  } else {
+    node$color <- "#cfcfcf"
+  }
+  if (length(node$children) > 0) {
+    node$children <- lapply(node$children, function(child) {
+      .krona_gradient_palette(child, scale_fn, depth + 1)
+    })
+  }
+  node
+}
+
+# ---- Override colors for nodes matching grey_terms -------------------------
+.krona_grey_terms <- function(node, grey_terms) {
+  na_in_terms <- any(is.na(grey_terms))
+  str_terms <- grey_terms[!is.na(grey_terms)]
+  name_is_na <- is.null(node$name) || is.na(node$name)
+  if (
+    (name_is_na && na_in_terms) || (!name_is_na && node$name %in% str_terms)
+  ) {
+    node$color <- "#c8c8c8"
+  }
+  if (length(node$children) > 0) {
+    node$children <- lapply(node$children, function(child) {
+      .krona_grey_terms(child, grey_terms)
+    })
+  }
+  node
+}
+
+# ---- Attach per-rank color options to every node for the JS color selector --
+# Walks `node` and a parallel list of same-structure colored hierarchies in
+# lock-step, storing a named list `colorsByRank` on each node.
+.add_color_options <- function(node, colored_list) {
+  node$colorsByRank <- lapply(colored_list, function(cn) cn$color)
+  if (length(node$children) > 0) {
+    for (i in seq_along(node$children)) {
+      sub_colored <- lapply(colored_list, function(cn) {
+        if (i <= length(cn$children)) cn$children[[i]] else cn
+      })
+      node$children[[i]] <- .add_color_options(node$children[[i]], sub_colored)
+    }
   }
   node
 }
 
 # ---- Flatten hierarchy to a data.frame of arcs (sunburst) ------------------
-.flatten_hierarchy <- function(node, x0, x1, depth, rows) {
+.flatten_hierarchy <- function(
+  node,
+  x0,
+  x1,
+  depth,
+  rows,
+  parent_value = NA_real_
+) {
   rows[[length(rows) + 1]] <- list(
     name = node$name,
     value = node$value,
     depth = depth,
     x0 = x0,
     x1 = x1,
-    color = if (is.null(node$color)) NA_character_ else node$color
+    color = if (is.null(node$color)) NA_character_ else node$color,
+    numeric_attr = if (
+      is.null(node$numeric_attr) || length(node$numeric_attr) == 0
+    ) {
+      NA_real_
+    } else {
+      node$numeric_attr
+    },
+    is_aggregate = isTRUE(node$is_aggregate),
+    parent_value = parent_value,
+    collapsed_path = if (is.null(node$collapsed_path)) {
+      NA_character_
+    } else {
+      paste(node$collapsed_path, collapse = " / ")
+    }
   )
   kids <- node$children
   if (length(kids) == 0) {
@@ -284,14 +662,31 @@ utils::globalVariables(c(
   cum <- x0
   for (k in kids) {
     cx1 <- cum + span * (k$value / total)
-    rows <- .flatten_hierarchy(k, cum, cx1, depth + 1, rows)
+    rows <- .flatten_hierarchy(
+      k,
+      cum,
+      cx1,
+      depth + 1,
+      rows,
+      parent_value = node$value
+    )
     cum <- cx1
   }
   rows
 }
 
 # ---- Recursive slice-and-dice treemap layout (no dep) ----------------------
-.layout_treemap <- function(node, x0, x1, y0, y1, depth, rows, horizontal) {
+.layout_treemap <- function(
+  node,
+  x0,
+  x1,
+  y0,
+  y1,
+  depth,
+  rows,
+  horizontal,
+  parent_value = NA_real_
+) {
   rows[[length(rows) + 1]] <- list(
     name = node$name,
     value = node$value,
@@ -300,7 +695,22 @@ utils::globalVariables(c(
     x1 = x1,
     y0 = y0,
     y1 = y1,
-    color = if (is.null(node$color)) NA_character_ else node$color
+    leaf = length(node$children) == 0,
+    color = if (is.null(node$color)) NA_character_ else node$color,
+    numeric_attr = if (
+      is.null(node$numeric_attr) || length(node$numeric_attr) == 0
+    ) {
+      NA_real_
+    } else {
+      node$numeric_attr
+    },
+    is_aggregate = isTRUE(node$is_aggregate),
+    parent_value = parent_value,
+    collapsed_path = if (is.null(node$collapsed_path)) {
+      NA_character_
+    } else {
+      paste(node$collapsed_path, collapse = " / ")
+    }
   )
   kids <- node$children
   if (length(kids) == 0) {
@@ -314,22 +724,212 @@ utils::globalVariables(c(
     cum <- x0
     for (k in kids) {
       nx1 <- cum + (x1 - x0) * (k$value / total)
-      rows <- .layout_treemap(k, cum, nx1, y0, y1, depth + 1, rows, FALSE)
+      rows <- .layout_treemap(
+        k,
+        cum,
+        nx1,
+        y0,
+        y1,
+        depth + 1,
+        rows,
+        FALSE,
+        parent_value = node$value
+      )
       cum <- nx1
     }
   } else {
     cum <- y0
     for (k in kids) {
       ny1 <- cum + (y1 - y0) * (k$value / total)
-      rows <- .layout_treemap(k, x0, x1, cum, ny1, depth + 1, rows, TRUE)
+      rows <- .layout_treemap(
+        k,
+        x0,
+        x1,
+        cum,
+        ny1,
+        depth + 1,
+        rows,
+        TRUE,
+        parent_value = node$value
+      )
       cum <- ny1
     }
   }
   rows
 }
 
+# ---- Helpers for the static path -------------------------------------------
+
+# Shorten a label with a middle ellipsis so both the start and end are visible.
+# `n` may be a single cap or one cap per element of `x`.
+.truncate_label_middle <- function(x, n = 24) {
+  n <- rep_len(n, length(x))
+  long <- !is.na(x) & nchar(x) > n
+  if (any(long)) {
+    xl <- x[long]
+    half <- pmax(1L, floor((n[long] - 3) / 2))
+    x[long] <- paste0(
+      substr(xl, 1, half),
+      "...",
+      substr(xl, nchar(xl) - half + 1, nchar(xl))
+    )
+  }
+  x
+}
+
+# Alternate sections ("one on two") within each ring/level so neighbours can
+# be told apart by a subtle motif. Parity is assigned left-to-right per depth.
+.alternate_pattern <- function(df) {
+  patt <- rep("none", nrow(df))
+  for (d in unique(df$depth)) {
+    idx <- which(df$depth == d)
+    idx <- idx[order(df$x0[idx])]
+    patt[idx[seq_along(idx) %% 2 == 0]] <- "dot"
+  }
+  patt
+}
+
+# Rectangle layer with optional dot motif and mandatory crosshatch for aggregate
+# "n more" sections (both via ggpattern when available).
+.krona_rect_layer <- function(
+  df,
+  ymin_col,
+  ymax_col,
+  pattern,
+  spacing,
+  fill_col = "color"
+) {
+  has_agg <- "is_aggregate" %in% names(df) && any(df$is_aggregate, na.rm = TRUE)
+  needs_ggpattern <- pattern || has_agg
+
+  base_aes <- ggplot2::aes(
+    xmin = x0,
+    xmax = x1,
+    ymin = .data[[ymin_col]],
+    ymax = .data[[ymax_col]],
+    fill = .data[[fill_col]]
+  )
+
+  if (!needs_ggpattern) {
+    return(ggplot2::geom_rect(
+      data = df,
+      mapping = base_aes,
+      color = "white",
+      linewidth = 0.3
+    ))
+  }
+
+  if (!requireNamespace("ggpattern", quietly = TRUE)) {
+    if (pattern) {
+      cli::cli_abort(
+        "Package {.pkg ggpattern} is required for {.code pattern = TRUE}. Install it with {.code install.packages('ggpattern')} or use {.code pattern = FALSE}."
+      )
+    }
+    cli::cli_inform(
+      c(
+        "!" = "Package {.pkg ggpattern} is not installed; {.val n more} aggregate sections will be shown without crosshatch."
+      )
+    )
+    return(ggplot2::geom_rect(
+      data = df,
+      mapping = base_aes,
+      color = "white",
+      linewidth = 0.3
+    ))
+  }
+
+  df$pattern_type <- if (pattern) {
+    .alternate_pattern(df)
+  } else {
+    rep("none", nrow(df))
+  }
+  if (has_agg) {
+    df$pattern_type[df$is_aggregate] <- "crosshatch"
+  }
+
+  list(
+    ggpattern::geom_rect_pattern(
+      data = df,
+      mapping = utils::modifyList(
+        base_aes,
+        ggplot2::aes(pattern = pattern_type)
+      ),
+      color = "white",
+      linewidth = 0.3,
+      pattern_fill = "grey20",
+      pattern_colour = NA,
+      pattern_density = 0.12,
+      pattern_spacing = spacing,
+      pattern_alpha = 0.55
+    ),
+    ggpattern::scale_pattern_manual(
+      values = c(none = "none", dot = "circle", crosshatch = "crosshatch"),
+      guide = "none"
+    )
+  )
+}
+
+# ---- Merge identical fill-chain rows into one spanning rect ----------------
+# Runs of identically-named arcs that share the same angular span (the
+# unassigned / "n more" fill chains) are collapsed into a single rect spanning
+# from the chain's innermost depth out to its outermost, so they render as one
+# borderless wedge carrying a single label. Adds `depthmax` (outer radius of
+# each rect) and `spanning` (TRUE for merged chain rects).
+.merge_fill_chains <- function(df) {
+  depthmax <- df$depth + 1
+  spanning <- rep(FALSE, nrow(df))
+  if (nrow(df) == 0) {
+    df$depthmax <- depthmax
+    df$spanning <- spanning
+    return(df)
+  }
+  key <- paste(
+    formatC(df$x0, format = "f", digits = 10),
+    formatC(df$x1, format = "f", digits = 10),
+    df$name,
+    sep = "\r"
+  )
+  keep_idx <- integer(0)
+  for (k in unique(key)) {
+    idx <- which(key == k)
+    if (length(idx) == 1) {
+      keep_idx <- c(keep_idx, idx)
+    } else {
+      inner <- idx[which.min(df$depth[idx])]
+      depthmax[inner] <- max(df$depth[idx]) + 1
+      spanning[inner] <- TRUE
+      keep_idx <- c(keep_idx, inner)
+    }
+  }
+  keep_idx <- sort(keep_idx)
+  out <- df[keep_idx, , drop = FALSE]
+  out$depthmax <- depthmax[keep_idx]
+  out$spanning <- spanning[keep_idx]
+  out
+}
+
 # ---- Static ggplot path ----------------------------------------------------
-.krona_static <- function(hier, layout, title) {
+.krona_static <- function(
+  hier,
+  layout,
+  title,
+  pattern = FALSE,
+  show_center_count = TRUE,
+  label_pct = "none",
+  label_orientation = "auto",
+  use_gradient = FALSE,
+  val_range = NULL,
+  gradient_name = NULL,
+  show_collapsed_path = FALSE
+) {
+  if (pattern && !requireNamespace("ggpattern", quietly = TRUE)) {
+    cli::cli_abort(
+      "Package {.pkg ggpattern} is required for {.code pattern = TRUE}. Install it with {.code install.packages('ggpattern')} or use {.code pattern = FALSE}."
+    )
+  }
+
+  total_weight <- hier$value
+
   if (layout == "sunburst") {
     rows <- .flatten_hierarchy(hier, 0, 2 * pi, 0, list())
     df <- do.call(
@@ -342,40 +942,296 @@ utils::globalVariables(c(
     if (nrow(df) == 0) {
       cli::cli_abort("No data to plot after filtering zero-weight taxa.")
     }
-    max_depth <- max(df$depth)
+    # Merge identical fill chains (unassigned / "n more") into single spanning,
+    # borderless rects. Adds `depthmax` and `spanning`.
+    df <- .merge_fill_chains(df)
+    max_depth <- max(df$depthmax) - 1
+    # In "auto" mode the leaf labels sit OUTSIDE the rim with leader lines, so
+    # reserve a ring of radial room beyond the outer wedge for them.
+    leaf_outside <- label_orientation == "auto"
+    outer_room <- if (leaf_outside) 1.5 else 0.0
     p <- ggplot2::ggplot() +
-      ggplot2::geom_rect(
-        data = df,
-        ggplot2::aes(
-          xmin = x0,
-          xmax = x1,
-          ymin = depth,
-          ymax = depth + 1,
-          fill = color
-        ),
-        color = "white",
-        linewidth = 0.3
+      .krona_rect_layer(
+        df,
+        "depth",
+        "depthmax",
+        pattern,
+        spacing = 0.012,
+        fill_col = if (use_gradient && !is.null(val_range)) {
+          "numeric_attr"
+        } else {
+          "color"
+        }
       ) +
-      ggplot2::scale_fill_identity() +
-      ggplot2::coord_polar(theta = "x", start = -pi / 2) +
-      ggplot2::scale_y_continuous(limits = c(0, max_depth + 1)) +
+      # clip = "off" lets radial leaf labels extend past the rim into the plot
+      # margin (added below) instead of being clipped at the cardinal edges,
+      # where the outer circle touches the panel boundary.
+      ggplot2::coord_polar(theta = "x", start = -pi / 2, clip = "off") +
+      ggplot2::scale_y_continuous(
+        limits = c(0, max_depth + 1 + outer_room)
+      ) +
       ggplot2::theme_void() +
-      ggplot2::theme(legend.position = "none") +
+      ggplot2::theme(
+        plot.margin = ggplot2::margin(12, 12, 12, 12, "pt")
+      ) +
       ggplot2::labs(title = title)
-
-    label_df <- df[(df$x1 - df$x0) > 0.25 & df$depth <= 3, , drop = FALSE]
-    if (nrow(label_df) > 0) {
-      label_df$xmid <- (label_df$x0 + label_df$x1) / 2
-      label_df$ymid <- label_df$depth + 0.5
+    if (use_gradient && !is.null(val_range)) {
       p <- p +
-        ggplot2::geom_text(
-          data = label_df,
-          ggplot2::aes(x = xmid, y = ymid, label = name),
+        ggplot2::scale_fill_gradientn(
+          colors = scales::viridis_pal()(256),
+          limits = val_range,
+          name = gradient_name,
+          na.value = "#cfcfcf"
+        ) +
+        ggplot2::theme(
+          legend.position = "right",
+          legend.key.width = ggplot2::unit(0.35, "cm"),
+          legend.key.height = ggplot2::unit(2, "cm"),
+          legend.title = ggplot2::element_text(size = 8),
+          legend.text = ggplot2::element_text(size = 7)
+        )
+    } else {
+      p <- p +
+        ggplot2::scale_fill_identity() +
+        ggplot2::theme(legend.position = "none")
+    }
+
+    if (show_center_count) {
+      # x = 0, y = 0 → the exact pole of coord_polar regardless of angle.
+      # Thousands separator: NARROW NO-BREAK SPACE (U+202F) per CGPM 2003.
+      p <- p +
+        ggplot2::annotate(
+          "text",
+          x = 0,
+          y = 0,
+          label = paste0(
+            "n = ",
+            format(round(total_weight), big.mark = " ", scientific = FALSE)
+          ),
           size = 3,
-          color = "white",
+          color = "#333333",
           fontface = "bold"
         )
     }
+
+    # ---- Section labels -----------------------------------------------------
+    # `label_orientation`:
+    #   "auto" (default): internal labels run tangentially, centred on their
+    #     wedge, and are shown only when the name fits within the arc -- so they
+    #     stay inside their ring and never overlap neighbours; leaf labels are
+    #     placed OUTSIDE the rim, radial and reading outward, each linked to its
+    #     wedge by a short grey leader line.
+    #   "radial": every label is radial, anchored at the band inner edge,
+    #     reading outward inside the circle (Krona style).
+    #   "tangential": every label runs along its arc, centred in the band.
+    # Merged fill chains (one spanning rect) are labelled once, as a leaf.
+    # Rotation is normalised to [-90, 90] so text is never upside-down; wedges
+    # with no room get a small dot.
+    mode <- label_orientation
+    rim <- max_depth + 1
+
+    lab_df <- df
+    lab_df$xmid <- (lab_df$x0 + lab_df$x1) / 2
+    lab_df$arcw <- lab_df$x1 - lab_df$x0
+    lab_df$is_leaf <- (lab_df$depth == max_depth) | lab_df$spanning
+
+    if (label_pct != "none") {
+      denom <- if (label_pct == "parent") lab_df$parent_value else total_weight
+      pct <- round(lab_df$value / denom * 100, 1)
+      pct[!is.finite(pct)] <- 0
+      lab_df$lab <- paste0(lab_df$name, " (", pct, "%)")
+    } else {
+      lab_df$lab <- lab_df$name
+    }
+
+    lab_df$col <- ifelse(
+      lab_df$is_leaf | lab_df$is_aggregate,
+      "#111111",
+      "white"
+    )
+    if (show_collapsed_path && "collapsed_path" %in% names(lab_df)) {
+      has_path <- !is.na(lab_df$collapsed_path)
+      if (any(has_path)) {
+        lab_df$lab[has_path] <- paste0(
+          lab_df$collapsed_path[has_path],
+          " / ",
+          lab_df$lab[has_path]
+        )
+        lab_df$col[has_path] <- "#555555"
+      }
+    }
+
+    ang_norm <- function(a) ((a + 90) %% 180) - 90
+    ang_radial_of <- function(x) ang_norm(-(x / (2 * pi)) * 360 + 90)
+    ang_tang_of <- function(x) ang_norm(-(x / (2 * pi)) * 360)
+    lab_df$hj_side <- ifelse(lab_df$xmid < pi, 0, 1)
+
+    sz_inner <- 2.3
+    sz_leaf <- 2.5
+    cw <- 0.16 # approx radius units per character (tangential fit test)
+
+    inner_df <- lab_df[!lab_df$is_leaf, , drop = FALSE]
+    leaf_df <- lab_df[lab_df$is_leaf, , drop = FALSE]
+    dots <- lab_df[0, , drop = FALSE]
+    dot_cols <- names(dots)
+
+    # ---- internal labels --------------------------------------------------
+    if (nrow(inner_df) > 0) {
+      inner_df$ymid <- inner_df$depth + 0.5
+      if (mode == "tangential") {
+        # tangential, centred, shown only when the name fits the arc
+        inner_df$lab <- .truncate_label_middle(inner_df$lab, 34)
+        fits <- nchar(inner_df$lab) * cw <= inner_df$arcw * inner_df$ymid
+        show <- inner_df[fits, , drop = FALSE]
+        dots <- rbind(
+          dots,
+          inner_df[!fits & inner_df$arcw > 0.05, dot_cols, drop = FALSE]
+        )
+        if (nrow(show) > 0) {
+          show$ang <- ang_tang_of(show$xmid)
+          p <- p +
+            ggplot2::geom_text(
+              data = show,
+              ggplot2::aes(
+                x = xmid,
+                y = ymid,
+                label = lab,
+                angle = ang,
+                colour = col
+              ),
+              hjust = 0.5,
+              size = sz_inner,
+              fontface = "bold"
+            )
+        }
+      } else {
+        # auto / radial: radial, reading outward from the band inner edge,
+        # centred on the wedge and shortened to the radial room (capped so a
+        # label does not run across more than ~two rings).
+        room <- pmin(rim - inner_df$depth, 1.9)
+        maxch <- pmax(4L, floor(room / 0.085))
+        inner_df$lab <- .truncate_label_middle(inner_df$lab, maxch)
+        keep <- inner_df$arcw * inner_df$ymid >= 0.30
+        show <- inner_df[keep, , drop = FALSE]
+        dots <- rbind(
+          dots,
+          inner_df[!keep & inner_df$arcw > 0.05, dot_cols, drop = FALSE]
+        )
+        if (nrow(show) > 0) {
+          show$ang <- ang_radial_of(show$xmid)
+          show$y_in <- show$depth + 0.06
+          p <- p +
+            ggplot2::geom_text(
+              data = show,
+              ggplot2::aes(
+                x = xmid,
+                y = y_in,
+                label = lab,
+                angle = ang,
+                hjust = hj_side,
+                colour = col
+              ),
+              vjust = 0.5,
+              size = sz_inner,
+              fontface = "bold"
+            )
+        }
+      }
+    }
+
+    # ---- leaf labels ------------------------------------------------------
+    if (nrow(leaf_df) > 0) {
+      keep <- leaf_df$arcw * rim >= 0.5
+      show <- leaf_df[keep, , drop = FALSE]
+      dots <- rbind(
+        dots,
+        leaf_df[!keep & leaf_df$arcw > 0.05, dot_cols, drop = FALSE]
+      )
+      if (nrow(show) > 0) {
+        if (mode == "auto") {
+          # external callouts: short leader line + radial label outside the rim
+          show$lab <- .truncate_label_middle(show$lab, 40)
+          show$ang <- ang_radial_of(show$xmid)
+          show$y0 <- rim
+          show$y1 <- rim + 0.12
+          show$y_lab <- rim + 0.18
+          p <- p +
+            ggplot2::geom_segment(
+              data = show,
+              ggplot2::aes(x = xmid, xend = xmid, y = y0, yend = y1),
+              colour = "#999999",
+              linewidth = 0.25
+            ) +
+            ggplot2::geom_text(
+              data = show,
+              ggplot2::aes(
+                x = xmid,
+                y = y_lab,
+                label = lab,
+                angle = ang,
+                hjust = hj_side,
+                colour = col
+              ),
+              vjust = 0.5,
+              size = sz_leaf,
+              fontface = "bold"
+            )
+        } else if (mode == "radial") {
+          show$lab <- .truncate_label_middle(show$lab, 34)
+          show$ang <- ang_radial_of(show$xmid)
+          show$y_in <- show$depth + 0.06
+          p <- p +
+            ggplot2::geom_text(
+              data = show,
+              ggplot2::aes(
+                x = xmid,
+                y = y_in,
+                label = lab,
+                angle = ang,
+                hjust = hj_side,
+                colour = col
+              ),
+              vjust = 0.5,
+              size = sz_leaf,
+              fontface = "bold"
+            )
+        } else {
+          # tangential: centred along the arc, in the (spanning) leaf band
+          show$lab <- .truncate_label_middle(show$lab, 34)
+          show$ymid <- (show$depth + show$depthmax) / 2
+          show$ang <- ang_tang_of(show$xmid)
+          p <- p +
+            ggplot2::geom_text(
+              data = show,
+              ggplot2::aes(
+                x = xmid,
+                y = ymid,
+                label = lab,
+                angle = ang,
+                colour = col
+              ),
+              hjust = 0.5,
+              size = sz_leaf,
+              fontface = "bold"
+            )
+        }
+      }
+    }
+
+    # ---- dots for wedges with no room -------------------------------------
+    if (nrow(dots) > 0) {
+      dots$ymid <- ifelse(dots$is_leaf, rim - 0.5, dots$depth + 0.5)
+      dots$col <- ifelse(dots$is_leaf | dots$is_aggregate, "#444444", "white")
+      p <- p +
+        ggplot2::geom_text(
+          data = dots,
+          ggplot2::aes(x = xmid, y = ymid, colour = col),
+          label = "·",
+          size = 3
+        )
+    }
+
+    p <- p + ggplot2::scale_colour_identity()
     return(p)
   }
 
@@ -391,39 +1247,74 @@ utils::globalVariables(c(
     cli::cli_abort("No data to plot after filtering zero-weight taxa.")
   }
   p <- ggplot2::ggplot() +
-    ggplot2::geom_rect(
-      data = df,
-      ggplot2::aes(
-        xmin = x0,
-        xmax = x1,
-        ymin = y0,
-        ymax = y1,
-        fill = color
-      ),
-      color = "white",
-      linewidth = 0.3
+    .krona_rect_layer(
+      df,
+      "y0",
+      "y1",
+      pattern,
+      spacing = 0.03,
+      fill_col = if (use_gradient && !is.null(val_range)) {
+        "numeric_attr"
+      } else {
+        "color"
+      }
     ) +
-    ggplot2::scale_fill_identity() +
     ggplot2::scale_x_continuous(expand = c(0, 0)) +
     ggplot2::scale_y_continuous(expand = c(0, 0)) +
     ggplot2::coord_fixed() +
     ggplot2::theme_void() +
-    ggplot2::theme(legend.position = "none") +
     ggplot2::labs(title = title)
+  if (use_gradient && !is.null(val_range)) {
+    p <- p +
+      ggplot2::scale_fill_gradientn(
+        colors = scales::viridis_pal()(256),
+        limits = val_range,
+        name = gradient_name,
+        na.value = "#cfcfcf"
+      ) +
+      ggplot2::theme(
+        legend.position = "right",
+        legend.key.width = ggplot2::unit(0.35, "cm"),
+        legend.key.height = ggplot2::unit(2, "cm"),
+        legend.title = ggplot2::element_text(size = 8),
+        legend.text = ggplot2::element_text(size = 7)
+      )
+  } else {
+    p <- p +
+      ggplot2::scale_fill_identity() +
+      ggplot2::theme(legend.position = "none")
+  }
 
   label_df <- df[
-    (df$x1 - df$x0) > 0.05 & (df$y1 - df$y0) > 0.06 & df$depth <= 3,
+    df$leaf & (df$x1 - df$x0) > 0.05 & (df$y1 - df$y0) > 0.035,
     ,
     drop = FALSE
   ]
   if (nrow(label_df) > 0) {
-    label_df$xmid <- (label_df$x0 + label_df$x1) / 2
-    label_df$ymid <- (label_df$y0 + label_df$y1) / 2
+    if (label_pct != "none") {
+      denom <- if (label_pct == "parent") {
+        label_df$parent_value
+      } else {
+        total_weight
+      }
+      pct <- round(label_df$value / denom * 100, 1)
+      pct[!is.finite(pct)] <- 0
+      label_df$lab <- paste0(
+        .truncate_label_middle(label_df$name),
+        " (",
+        pct,
+        "%)"
+      )
+    } else {
+      label_df$lab <- .truncate_label_middle(label_df$name)
+    }
     p <- p +
       ggplot2::geom_text(
         data = label_df,
-        ggplot2::aes(x = xmid, y = ymid, label = name),
-        size = 3,
+        ggplot2::aes(x = x0 + 0.004, y = y1 - 0.004, label = lab),
+        hjust = 0,
+        vjust = 1,
+        size = 2.5,
         color = "white",
         fontface = "bold"
       )
@@ -455,9 +1346,12 @@ utils::globalVariables(c(
 #' - `"treemap"`: nested rectangles; the **area** of each rectangle is
 #'   proportional to its value. Click a cell to zoom in.
 #'
-#' Colours follow the Krona convention: each distinct value at the
-#' `color_by` rank receives its own hue, and descendants inherit the parent
-#' hue with a progressive lightness shift (darker as you go deeper).
+#' Colours: each distinct value at the `color_by` rank receives its own
+#' evenly spaced hue; its descendants then fan out across a hue band centred
+#' on that hue (and grow slightly darker with depth), so nested sections are
+#' clearly distinct colours rather than near-identical shades. Set
+#' `pattern = TRUE` (static plots only) to overlay a faint grey dotted motif
+#' on every other section, an extra channel to tell neighbours apart.
 #'
 #' This function is a drop-in alternative to [MiscMetabar::krona()], which
 #' shells out to KronaTools and does not work on Windows. `krona_like_pq()`
@@ -465,9 +1359,13 @@ utils::globalVariables(c(
 #'
 #' @param physeq (required) A [phyloseq::phyloseq-class] object.
 #' @param ranks (character or integer, default `"All"`) Taxonomic ranks to
-#'   use. `"All"` selects every column of `tax_table(physeq)`; an integer
-#'   vector selects columns by position; a character vector selects columns
-#'   by name (must all be present in [phyloseq::rank_names()]).
+#'   include. `"All"` (default) first tries to select only the seven standard
+#'   ranks Kingdom, Phylum, Class, Order, Family, Genus, Species (in that order)
+#'   if at least two of them are present — this avoids cluttering the chart with
+#'   non-hierarchical annotation columns. Falls back to every column of
+#'   `tax_table()` only when fewer than two classical ranks are found. An
+#'   integer vector selects columns by position; a character vector selects
+#'   columns by name (must all be present in [phyloseq::rank_names()]).
 #' @param weight_by Weight applied to each taxon when computing wedge/rectangle
 #'   sizes. One of:
 #'   - `"sequences"` (default): the total read count per taxon
@@ -484,6 +1382,15 @@ utils::globalVariables(c(
 #'   happens for the first `add_unassigned_rank` ranks (1-based, among the
 #'   selected `ranks`); beyond that depth, taxa with `NA` at a rank are
 #'   dropped.
+#' @param fill_unassigned (logical, default `TRUE`) When `TRUE`, a section that
+#'   terminates before the deepest rank -- an `"unassigned"` taxon, or a
+#'   `min_prop` `"n more"` aggregate -- is extended with a chain of identical
+#'   nested nodes down to the deepest selected rank, so its arc reaches the
+#'   outer ring (e.g. a taxon unidentified from Class onwards still spans Class,
+#'   Order, ..., Species; the whole circle is filled). The repeated segments
+#'   render as a single borderless wedge carrying one label at the leaf. When
+#'   `FALSE`, the section stops at the rank where it ended, leaving an inner
+#'   wedge with no outer rings.
 #' @param layout (character, default `"sunburst"`) One of `"sunburst"` (angle
 #'   = value, Krona pie) or `"treemap"` (area = value).
 #' @param interactive (logical, default `TRUE`) If `TRUE`, returns a D3.js
@@ -491,15 +1398,86 @@ utils::globalVariables(c(
 #'   a static [ggplot2::ggplot] object with no extra dependency.
 #' @param title (character, default `NULL`) Chart title. When `NULL`, defaults
 #'   to `"Taxonomy"`.
-#' @param color_by (character, default `NULL`) Name of the rank whose
-#'   distinct values receive distinct hues. Descendants inherit the parent
-#'   hue with a lightness shift. When `NULL`, defaults to the first selected
-#'   rank (the outermost ring) — the classic Krona look.
+#' @param color_by (character, default `NULL`) Name of the rank (must be in
+#'   `ranks` for categorical coloring, or any `tax_table()` column when
+#'   `color_as_numeric = TRUE`) whose values drive the colour assignment.
+#'   When `NULL`, defaults to the first selected rank. Tip: when the first
+#'   rank has only one value (e.g. a single phylum), set `color_by` to a more
+#'   diverse rank to spread colour earlier.
+#' @param color_as_numeric (logical, default `FALSE`) When `TRUE`, `color_by`
+#'   may be any column of `tax_table()` (not just a rank in `ranks`). Its
+#'   values are coerced to numeric and mapped to a continuous sequential
+#'   gradient (viridis palette via **scales**). Numeric values are aggregated
+#'   up the tree by weighted mean using `weight_by`, so internal sections
+#'   receive a meaningful colour. Requires the **scales** package.
+#' @param pattern (logical, default `FALSE`) Static plots only. When `TRUE`,
+#'   overlays a faint grey dotted motif on every other section (alternating
+#'   within each ring/level) so neighbouring sections of similar colour can
+#'   still be told apart. Requires the **ggpattern** package. Ignored when
+#'   `interactive = TRUE`.
+#' @param label_pct (character, default `"none"`) Whether to append a
+#'   proportion to each section label. One of `"none"` (no percentage),
+#'   `"total"` (percentage of the overall total, following `weight_by`), or
+#'   `"parent"` (percentage of the immediate parent section). Applies to static
+#'   plots only.
+#' @param show_center_count (logical, default `TRUE`) Static sunburst only.
+#'   When `TRUE`, the total count (following `weight_by`) is shown in the
+#'   centre hole as `n = <x>`, mirroring the original Krona display. Set to
+#'   `FALSE` to suppress. For the interactive widget the centre count updates
+#'   to the focused node when zooming; controlled by `show_center_count` as
+#'   well.
+#' @param min_prop (numeric, default `NULL`) When a positive number, siblings
+#'   within the same parent whose proportion of that parent falls below this
+#'   threshold are merged into a single `"<n> more"` aggregate section
+#'   (crosshatch motif via **ggpattern**; plain grey if **ggpattern** is not
+#'   available). `NULL` (default) disables merging. A typical value is `0.02`
+#'   (2%). Aggregation recurs at every depth. When `fill_unassigned = TRUE`
+#'   (the default) the aggregate also spans out to the leaf ring as one
+#'   borderless wedge, so the whole circle stays filled.
+#' @param collapse_single (logical, default `FALSE`) When `TRUE`, internal
+#'   nodes that have exactly one child (and that child is not a leaf) are
+#'   removed from the hierarchy; the grandchildren attach directly to the
+#'   grandparent. This trims redundant intermediate ranks (e.g. a Family
+#'   containing a single Genus) from both static and interactive views.
+#'   Leaf nodes are never collapsed.
+#' @param show_collapsed_path (logical, default `FALSE`) Static plots only, and
+#'   only meaningful together with `collapse_single = TRUE`. When `TRUE`, each
+#'   collapsed section is labelled with its full taxonomic path -- the names of
+#'   the skipped intermediate ranks joined by `" / "` and prefixed to the node
+#'   name (e.g. `"Stereaceae / Stereum"`) -- drawn in grey so the merged ranks
+#'   remain visible.
+#' @param grey_terms (character, default `c(NA, "unassigned", "unknown")`)
+#'   Section names whose colour is overridden to grey, used to visually mute
+#'   uninformative taxa. `NA` matches sections with a missing name. Pass
+#'   `character(0)` to disable.
+#' @param label_orientation (character, default `"auto"`) Static sunburst
+#'   only. Controls how section labels are placed. `"auto"` (default):
+#'   **internal** labels are **radial** (running along the radius), centred on
+#'   their wedge and reading outward from the band inner edge, shortened to the
+#'   radial room so they stay within ~their ring; **leaf** labels are placed
+#'   **outside the rim**, radial and reading outward, each linked to its wedge
+#'   by a short grey leader line. `"radial"` is the same but keeps the leaf
+#'   labels inside the circle (the original Krona style). `"tangential"` runs
+#'   every label along its arc, centred in the band, shown only when the name
+#'   fits. In all modes text is normalised to never appear upside-down, merged
+#'   fill chains are labelled once, and wedges with no room get a small dot.
+#' @param show_search (logical, default `FALSE`) Interactive widget only.
+#'   Deprecated: the search box is now always shown in the widget toolbar (for
+#'   both layouts); this argument is retained for backward compatibility and
+#'   has no effect.
+#' @param show_info_panel (logical, default `FALSE`) Interactive widget only.
+#'   When `TRUE`, a top-left info panel shows the hovered node's name, count,
+#'   and percentages of parent and total, plus a list of sibling nodes.
+#' @param check_nestedness (logical, default `TRUE`) When `TRUE`, the function
+#'   checks that `tax_table()` is strictly nested (each value at rank `i+1`
+#'   appears under only one parent at rank `i`) and issues a [cli::cli_warn()]
+#'   for any offending rank pair. Set to `FALSE` to suppress this check, e.g.
+#'   when annotation columns are intentionally non-hierarchical.
 #' @param file_path (character, default `NULL`) When `interactive = TRUE` and
 #'   this is set, the widget is also saved as a self-contained `.html` file
 #'   via [htmlwidgets::saveWidget()]. The widget is then returned invisibly.
 #'   Ignored when `interactive = FALSE`.
-#' @param width, height (numeric, default `NULL`) Widget dimensions in pixels.
+#' @param width,height (numeric, default `NULL`) Widget dimensions in pixels.
 #'   When `NULL`, the widget fills its container (RStudio viewer / Shiny).
 #'   Ignored when `interactive = FALSE`.
 #'
@@ -515,31 +1493,73 @@ utils::globalVariables(c(
 #' @examples
 #' \donttest{
 #' data(data_fungi_mini, package = "MiscMetabar")
+#' pq5 <- phyloseq::prune_samples(
+#'   phyloseq::sample_names(data_fungi_mini)[1:5],
+#'   data_fungi_mini
+#' )
 #'
 #' # Static sunburst (no extra dependency needed)
-#' krona_like_pq(data_fungi_mini, interactive = FALSE)
+#' krona_like_pq(pq5, interactive = FALSE)
+#' }
+#'
+#' \dontrun{
+#' data(data_fungi_mini, package = "MiscMetabar")
 #'
 #' # Static treemap
 #' krona_like_pq(data_fungi_mini, layout = "treemap", interactive = FALSE)
 #'
+#' # Show proportion of total on labels
+#' krona_like_pq(data_fungi_mini, interactive = FALSE, label_pct = "total")
+#'
+#' # Show proportion of parent on labels
+#' krona_like_pq(data_fungi_mini, interactive = FALSE, label_pct = "parent")
+#'
+#' # Merge low-abundance sections (< 2 percent of parent) into "n more"
+#' krona_like_pq(data_fungi_mini, interactive = FALSE, min_prop = 0.02)
+#'
+#' # Collapse single-child intermediate levels
+#' krona_like_pq(data_fungi_mini, interactive = FALSE, collapse_single = TRUE)
+#'
+#' # Add a faint dotted motif on alternate sections (needs ggpattern)
+#' if (requireNamespace("ggpattern", quietly = TRUE)) {
+#'   krona_like_pq(data_fungi_mini, interactive = FALSE, pattern = TRUE)
+#' }
+#'
+#' # Colour by a numeric tax_table attribute (e.g. a confidence score column)
+#' if (requireNamespace("scales", quietly = TRUE)) {
+#'   pq_num <- data_fungi_mini
+#'   phyloseq::tax_table(pq_num) <- cbind(
+#'     phyloseq::tax_table(pq_num),
+#'     conf_score = as.character(stats::runif(phyloseq::ntaxa(pq_num)))
+#'   )
+#'   krona_like_pq(
+#'     pq_num,
+#'     interactive = FALSE,
+#'     color_by = "conf_score",
+#'     color_as_numeric = TRUE
+#'   )
+#' }
+#'
 #' # Weight by ASV count instead of read count
 #' krona_like_pq(data_fungi_mini, weight_by = "asv", interactive = FALSE)
-#'
-#' # Weight by a transformation of read counts
-#' krona_like_pq(data_fungi_mini, weight_by = log1p, interactive = FALSE)
 #'
 #' # Subset of ranks and a custom title
 #' krona_like_pq(
 #'   data_fungi_mini,
 #'   ranks = c("Phylum", "Class", "Order"),
-#'   title = "Fungi — top 3 ranks",
+#'   title = "Fungi -- top 3 ranks",
 #'   interactive = FALSE
 #' )
-#' }
 #'
-#' \dontrun{
 #' # Interactive D3 widget (requires the htmlwidgets package)
 #' krona_like_pq(data_fungi_mini)
+#'
+#' # Interactive widget with search box and info panel
+#' krona_like_pq(
+#'   data_fungi_mini,
+#'   show_search = TRUE,
+#'   show_info_panel = TRUE
+#' )
 #'
 #' # Save a self-contained HTML file to share
 #' krona_like_pq(data_fungi_mini, file_path = "krona_fungi.html")
@@ -552,20 +1572,52 @@ krona_like_pq <- function(
   ranks = "All",
   weight_by = "sequences",
   add_unassigned_rank = 0,
+  fill_unassigned = TRUE,
   layout = c("sunburst", "treemap"),
   interactive = TRUE,
   title = NULL,
   color_by = NULL,
+  color_as_numeric = FALSE,
+  pattern = FALSE,
+  label_pct = c("none", "total", "parent"),
+  show_center_count = TRUE,
+  min_prop = NULL,
+  collapse_single = FALSE,
+  show_collapsed_path = FALSE,
+  grey_terms = c(NA_character_, "unassigned", "unknown"),
+  label_orientation = c("auto", "tangential", "radial"),
+  show_search = FALSE,
+  show_info_panel = FALSE,
+  check_nestedness = TRUE,
   file_path = NULL,
   width = NULL,
   height = NULL
 ) {
   verify_pq(physeq)
   layout <- match.arg(layout)
+  label_pct <- match.arg(label_pct)
+  label_orientation <- match.arg(label_orientation)
+
+  if (pattern && interactive) {
+    cli::cli_warn(
+      "{.arg pattern} only applies to static plots and is ignored when {.code interactive = TRUE}. Set {.code interactive = FALSE} to use it."
+    )
+  }
+  if (
+    !is.null(min_prop) &&
+      (!is.numeric(min_prop) ||
+        length(min_prop) != 1 ||
+        min_prop < 0 ||
+        min_prop >= 1)
+  ) {
+    cli::cli_abort(
+      "{.arg min_prop} must be a single number in [0, 1) or {.code NULL}."
+    )
+  }
 
   all_ranks <- phyloseq::rank_names(physeq)
   if (length(ranks) == 1 && ranks == "All") {
-    ranks <- all_ranks
+    ranks <- .default_ranks(all_ranks)
   } else if (is.numeric(ranks)) {
     ranks <- all_ranks[ranks]
   } else {
@@ -597,23 +1649,103 @@ krona_like_pq <- function(
     cli::cli_abort("No taxa with positive weight remain to plot.")
   }
 
-  hier <- .build_tax_hierarchy(tt, ranks, weights, 0, add_unassigned_rank)
+  if (check_nestedness) {
+    .check_nestedness(tt, ranks)
+  }
+
+  # Resolve color_by and extract numeric attribute when color_as_numeric = TRUE
+  if (is.null(color_by)) {
+    color_by <- ranks[1]
+  }
+
+  numeric_vals <- NULL
+  use_gradient <- FALSE
+
+  if (color_as_numeric) {
+    if (!requireNamespace("scales", quietly = TRUE)) {
+      cli::cli_abort(
+        "Package {.pkg scales} is required for {.code color_as_numeric = TRUE}. Install it with {.code install.packages('scales')}."
+      )
+    }
+    if (!color_by %in% all_ranks) {
+      cli::cli_abort(
+        "{.arg color_by} column {.val {color_by}} not found in tax_table."
+      )
+    }
+    raw_vals <- as.vector(phyloseq::tax_table(physeq)[, color_by])
+    numeric_vals_all <- suppressWarnings(as.numeric(as.character(raw_vals)))
+    names(numeric_vals_all) <- phyloseq::taxa_names(physeq)
+    if (all(is.na(numeric_vals_all))) {
+      cli::cli_abort(
+        "{.arg color_by} column {.val {color_by}} cannot be coerced to numeric. Use {.code color_as_numeric = FALSE} for categorical coloring."
+      )
+    }
+    numeric_vals <- numeric_vals_all[keep]
+    use_gradient <- TRUE
+    color_depth <- NULL
+  } else {
+    color_depth <- match(color_by, ranks)
+    if (is.na(color_depth)) {
+      cli::cli_abort(
+        "{.arg color_by} rank {.val {color_by}} is not in {.arg ranks}."
+      )
+    }
+  }
+
+  hier <- .build_tax_hierarchy(
+    tt,
+    ranks,
+    weights,
+    0,
+    add_unassigned_rank,
+    numeric_vals,
+    fill_unassigned
+  )
   if (is.null(hier)) {
     cli::cli_abort("Could not build a taxonomy hierarchy from the data.")
   }
   hier$name <- "All"
 
-  if (is.null(color_by)) {
-    color_by <- ranks[1]
+  if (collapse_single) {
+    hier <- .collapse_single_children(hier)
   }
-  color_depth <- match(color_by, ranks)
-  if (is.na(color_depth)) {
-    cli::cli_abort(
-      "{.arg color_by} rank {.val {color_by}} is not in {.arg ranks}."
+
+  if (!is.null(min_prop) && min_prop > 0) {
+    hier <- .merge_low_abundance(
+      hier,
+      min_prop,
+      max_depth = length(ranks),
+      fill = fill_unassigned
     )
   }
-  hue_map <- .build_hue_map(hier, color_depth)
-  hier <- .krona_palette(hier, color_depth, hue_map)
+
+  if (use_gradient) {
+    val_range <- range(numeric_vals, na.rm = TRUE)
+    if (diff(val_range) == 0) {
+      val_range <- val_range + c(-1, 1)
+    }
+    scale_fn <- scales::col_numeric(palette = "viridis", domain = val_range)
+    hier <- .krona_gradient_palette(hier, scale_fn)
+  } else {
+    hue_map <- .build_hue_map(hier, color_depth)
+    hier <- .krona_palette(hier, color_depth, hue_map)
+
+    # Pre-compute one colored copy per rank for the JS color-by selector.
+    if (interactive) {
+      color_sets <- stats::setNames(
+        lapply(seq_along(ranks), function(i) {
+          hm_i <- .build_hue_map(hier, i)
+          .krona_palette(hier, i, hm_i)
+        }),
+        ranks
+      )
+      hier <- .add_color_options(hier, color_sets)
+    }
+  }
+
+  if (!is.null(grey_terms) && length(grey_terms) > 0) {
+    hier <- .krona_grey_terms(hier, grey_terms)
+  }
 
   if (is.null(title)) {
     title <- "Taxonomy"
@@ -631,10 +1763,20 @@ krona_like_pq <- function(
         data = hier,
         layout = layout,
         title = title,
-        options = list()
+        options = list(
+          showCenterCount = show_center_count,
+          showSearch = show_search,
+          showInfoPanel = show_info_panel,
+          labelPct = label_pct,
+          totalWeight = hier$value,
+          ranks = as.list(ranks),
+          defaultColorBy = color_by,
+          collapseEnabled = collapse_single,
+          showCollapsedPath = show_collapsed_path
+        )
       ),
       width = width,
-      height = height,
+      height = if (is.null(height)) 700L else height,
       package = "ggplotpq"
     )
     if (!is.null(file_path)) {
@@ -644,5 +1786,17 @@ krona_like_pq <- function(
     return(widget)
   }
 
-  .krona_static(hier, layout, title)
+  .krona_static(
+    hier,
+    layout,
+    title,
+    pattern = pattern,
+    show_center_count = show_center_count,
+    label_pct = label_pct,
+    label_orientation = label_orientation,
+    use_gradient = use_gradient,
+    val_range = if (use_gradient) val_range else NULL,
+    gradient_name = if (use_gradient) color_by else NULL,
+    show_collapsed_path = show_collapsed_path
+  )
 }

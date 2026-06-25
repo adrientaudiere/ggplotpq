@@ -31,6 +31,8 @@ reference:
   - title: "New visualisation functions"
     desc: "Pure-ggplot2 helpers for phyloseq objects (geoms, themes, scales, palettes)."
     contents:
+      - break_outlier_axis
+      - zoom_outlier_axis
       - comet_pq
       - community_sharing_plot
       - community_sharing_barplot

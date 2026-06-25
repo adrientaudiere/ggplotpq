@@ -30,7 +30,9 @@ Imports:
     utils
 Suggests:
     earthtones,
+    ggbreak,
     ggforce,
+    ggpattern,
     ggtern,
     htmlwidgets,
     jsonlite,
