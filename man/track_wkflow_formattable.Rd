@@ -8,9 +8,9 @@ track_wkflow_formattable(
   track_df,
   parent = NULL,
   bar_color = "lightblue",
-  tile_low = "white",
-  tile_high = "steelblue",
-  seq_tile_low = "white",
+  tile_low = "#c0dcf5",
+  tile_high = "#4882b4",
+  seq_tile_low = "#c5fddd",
   seq_tile_high = "seagreen",
   div_bar_color = "mediumpurple",
   na_bar_color = "darkorange",
@@ -104,7 +104,7 @@ for large).
 \examples{
 data(data_fungi_mini, package = "MiscMetabar")
 d_filt <- prune_taxa(taxa_sums(data_fungi_mini) > 10000, data_fungi_mini) |>
-clean_pq()
+ clean_pq()
 track <- track_wkflow( list("full"=data_fungi, "mini" = data_fungi_mini, "filt" = d_filt))
 parent <- c(full=NA, mini = "full", filt = "mini")
 track_wkflow_formattable(track, parent)

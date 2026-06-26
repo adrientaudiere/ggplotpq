@@ -627,52 +627,51 @@ community_sharing_plot <- function(
     )
 
   # -- Pie charts (composition at rank `pie_taxrank`) -------------------------
-  d_rank <- phyloseq::tax_glom(physeq, pie_taxrank, NArm = FALSE)
-  otu_rank <- .agg_by_mod(d_rank, fact, modalities)
-  taxa_lab <- as.character(phyloseq::tax_table(d_rank)[
-    rownames(otu_rank),
-    pie_taxrank
-  ])
+  tidy_rank <- tidypq::pq_to_tidy(
+    physeq,
+    merge_sample_by = fact,
+    ranks = pie_taxrank,
+    filter_zero = FALSE,
+    verbose = FALSE
+  )
 
-  na_mask <- is.na(taxa_lab) | taxa_lab == ""
+  otu_long <- tidy_rank |>
+    dplyr::group_by(sample_id, .data[[pie_taxrank]]) |>
+    dplyr::summarise(count = sum(abundance), .groups = "drop") |>
+    dplyr::rename(modality = sample_id)
+
+  na_mask <- otu_long[[pie_taxrank]] == "Unknown" |
+    is.na(otu_long[[pie_taxrank]])
   if (show_na) {
-    taxa_lab[na_mask] <- "NA"
+    otu_long[[pie_taxrank]][na_mask] <- "NA"
   } else {
-    otu_rank <- otu_rank[!na_mask, , drop = FALSE]
-    taxa_lab <- taxa_lab[!na_mask]
+    otu_long <- otu_long[!na_mask, ]
   }
-  rownames(otu_rank) <- taxa_lab
 
-  # Collapse rare taxa into "Other" (NA kept aside as its own category)
-  real_taxa <- setdiff(rownames(otu_rank), "NA")
-  total_abund <- rowSums(otu_rank[real_taxa, , drop = FALSE])
+  real_taxa <- setdiff(unique(otu_long[[pie_taxrank]]), "NA")
+  total_abund <- otu_long |>
+    dplyr::filter(.data[[pie_taxrank]] %in% real_taxa) |>
+    dplyr::group_by(.data[[pie_taxrank]]) |>
+    dplyr::summarise(total = sum(count), .groups = "drop")
   n_keep <- min(max_taxa, length(real_taxa))
-  top_n <- names(sort(total_abund, decreasing = TRUE))[seq_len(n_keep)]
+  top_n <- total_abund[[pie_taxrank]][order(-total_abund$total)][seq_len(n_keep)]
 
-  is_other <- !(rownames(otu_rank) %in% c(top_n, "NA"))
-  if (any(is_other)) {
-    other_row <- colSums(otu_rank[is_other, , drop = FALSE])
-    otu_rank <- rbind(otu_rank[!is_other, , drop = FALSE], Other = other_row)
-  }
+  otu_long$taxon_group <- ifelse(
+    otu_long[[pie_taxrank]] %in% top_n,
+    otu_long[[pie_taxrank]],
+    ifelse(otu_long[[pie_taxrank]] == "NA", "NA", "Other")
+  )
+  otu_long <- otu_long |>
+    dplyr::group_by(modality, taxon_group) |>
+    dplyr::summarise(count = sum(count), .groups = "drop")
 
   tax_order <- c(
     top_n,
-    if ("Other" %in% rownames(otu_rank)) {
-      "Other"
-    },
-    if ("NA" %in% rownames(otu_rank)) {
-      "NA"
-    }
+    if ("Other" %in% unique(otu_long$taxon_group)) "Other",
+    if ("NA" %in% unique(otu_long$taxon_group)) "NA"
   )
-  otu_rank <- otu_rank[tax_order, , drop = FALSE]
 
-  pie_df <- as.data.frame(otu_rank) |>
-    tibble::rownames_to_column(pie_taxrank) |>
-    tidyr::pivot_longer(
-      -dplyr::all_of(pie_taxrank),
-      names_to = "modality",
-      values_to = "count"
-    ) |>
+  pie_df <- otu_long |>
     dplyr::filter(count > 0) |>
     dplyr::group_by(modality) |>
     dplyr::mutate(prop = count / sum(count)) |>
@@ -682,7 +681,7 @@ community_sharing_plot <- function(
       by = c("modality" = "name")
     ) |>
     dplyr::mutate(
-      !!pie_taxrank := factor(.data[[pie_taxrank]], levels = tax_order)
+      !!pie_taxrank := factor(taxon_group, levels = tax_order)
     )
 
   # -- geom_curve layers (one per metric x pair_flip x significant) -----------

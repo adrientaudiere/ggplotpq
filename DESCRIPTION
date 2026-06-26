@@ -27,6 +27,7 @@ Imports:
     rlang,
     stats,
     tibble,
+    tidypq,
     utils
 Suggests:
     earthtones,
