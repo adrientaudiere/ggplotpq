@@ -15,7 +15,10 @@ pure-ggplot2 helpers and single-phyloseq ggplot wrappers migrated from
 - ✅ In scope: pure ggplot2 helpers (geoms, themes, scales, palettes),
   single-phyloseq ggplot wrappers (e.g. `wheat_plot`, `reorder_distinct_colors`),
   rendering of analyses done elsewhere (ternary plot for `lefser` output,
-  `plotGamma` rendering for ALDEx2).
+  `plotGamma` rendering for ALDEx2), and HTML-widget visualisations of
+  workflow/phyloseq metadata (e.g. `track_wkflow_formattable`) — these
+  widgets stand here because they are pure rendering of pqverse objects,
+  not analysis methods.
 - ❌ Out of scope: multi-phyloseq comparators (→ `comparpq`),
   ML / networks / DAGs (→ `netaipq`), data-structure utilities
   (→ `tidypq`), analysis methods (→ `netaipq`).

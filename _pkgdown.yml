@@ -51,6 +51,10 @@ reference:
     desc: "Analysis wrappers that ship a ggplot (the analysis lives here, the plot is the deliverable)."
     contents:
       - neg_control_diag_pq
+  - title: "Workflow tracking"
+    desc: "Helpers to visualise workflow tracking output from MiscMetabar."
+    contents:
+      - track_wkflow_formattable
 
 navbar:
   structure:
