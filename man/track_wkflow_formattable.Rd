@@ -10,10 +10,15 @@ track_wkflow_formattable(
   bar_color = "lightblue",
   tile_low = "white",
   tile_high = "steelblue",
+  seq_tile_low = "white",
+  seq_tile_high = "seagreen",
+  div_bar_color = "mediumpurple",
+  na_bar_color = "darkorange",
   show_diff = TRUE,
   .interp_size = 0.7,
   .arrow_size = 1,
   big_mark = " ",
+  round = 2,
   ...
 )
 }
@@ -31,13 +36,27 @@ for roots). When \code{NULL}, no tree or diff columns are produced.}
 proportional bars on \code{nb_sequences}, \code{nb_clusters}, and \code{nb_samples}.}
 
 \item{tile_low, tile_high}{(character, default: "white"/"steelblue")
-Colors for the gradient tile applied to any extra numeric columns
-(e.g. taxonomy-rank columns added by
+Colors for the gradient tile applied to remaining numeric columns
+(e.g. \code{nb_rank}, \code{nb_sam_metadata}, or taxonomy-rank columns added by
 \code{track_wkflow(taxonomy_rank = ...)}).}
 
+\item{seq_tile_low, seq_tile_high}{(character, default:
+"white"/"seagreen") Colors for the gradient tile applied to
+\code{mean_length_seq}, \code{max_length_seq}, \code{min_length_seq} columns.}
+
+\item{div_bar_color}{(character, default: "mediumpurple") Fill color of
+the proportion bar applied to \verb{genetic_diversity_*} columns (values in
+[0, 1]; bar length = value).}
+
+\item{na_bar_color}{(character, default: "firebrick") Fill color of the
+proportion bar applied to \verb{prop_na_*} columns (values in [0, 1]; bar
+length = value). High proportions of NA appear as a long red bar to
+flag missing taxonomic assignments.}
+
 \item{show_diff}{(logical, default: TRUE) If \code{TRUE} and \code{parent} is
-supplied, insert mini columns after \code{nb_sequences} and \code{nb_clusters}
-showing the true-value difference with the parent.}
+supplied, insert mini columns after \code{nb_sequences}, \code{nb_clusters},
+\code{nb_samples}, and \code{nb_occurrences} showing the true-value difference
+with the parent.}
 
 \item{.interp_size}{(numeric, default: 0.7) Font-size multiplier (in
 \code{em} units) for the diff value text.}
@@ -49,6 +68,9 @@ showing the true-value difference with the parent.}
 digits every 3 places in numeric columns and diff values (e.g.
 \code{19000} becomes \verb{19\\U2009000}). Set to \code{NULL} or \code{""} to disable
 grouping.}
+
+\item{round}{(integer, default: 2) Number of decimal places to round
+numeric columns for display. Set to \code{NULL} or \code{NA} to disable rounding.}
 
 \item{...}{Additional arguments passed to \code{\link[formattable:formattable]{formattable::formattable()}}.}
 }
@@ -64,29 +86,37 @@ A \code{formattable} object (HTML widget).
 
 Wraps the output of \code{\link[MiscMetabar:track_wkflow]{MiscMetabar::track_wkflow()}} into a
 \code{\link[formattable:formattable]{formattable::formattable()}} HTML widget with proportional color bars on
-count columns (\code{nb_sequences}, \code{nb_clusters}, \code{nb_samples}).
+count columns (\code{nb_sequences}, \code{nb_clusters}, \code{nb_samples},
+\code{nb_occurrences}, and any \verb{n_samples_*} columns).
 
 When a \code{parent} mapping is supplied, an ASCII tree is drawn in the first
 column to visualise which phyloseq object is nested in which, rows are
-reordered to reflect the hierarchy (depth-first), and two extra columns
+reordered to reflect the hierarchy (depth-first), and mini diff columns
 are appended:
 \itemize{
-\item \code{retention} — child sequences divided by parent sequences, as a
-percentage.
-\item \code{Δ_sequences} / \code{Δ_clusters} — the true-value difference (not a
-percentage) with the parent, shown as a colored arrow: red \verb{↓} for
-reductions (pink for small, deep red for large), green \verb{↑} for
-augmentations (light green for small, deep green for large).
+\item \code{Δ_sequences} / \code{Δ_clusters} / \code{Δ_samples} / \code{Δ_occurrences} — the
+true-value difference (not a percentage) with the parent, shown as a
+colored arrow: red \verb{↓} for reductions (pink for small, deep red for
+large), green \verb{↑} for augmentations (light green for small, deep green
+for large).
 }
 }
 \examples{
-\donttest{
 data(data_fungi_mini, package = "MiscMetabar")
-d_filt <- prune_taxa(taxa_sums(data_fungi_mini) > 10, data_fungi_mini)
-track <- track_wkflow(list("raw" = data_fungi_mini, "filt" = d_filt))
-parent <- c(raw = NA, filt = "raw")
+d_filt <- prune_taxa(taxa_sums(data_fungi_mini) > 10000, data_fungi_mini) |>
+clean_pq()
+track <- track_wkflow( list("full"=data_fungi, "mini" = data_fungi_mini, "filt" = d_filt))
+parent <- c(full=NA, mini = "full", filt = "mini")
 track_wkflow_formattable(track, parent)
-}
+
+# With extra metrics from track_wkflow()
+track_extra <- track_wkflow(
+  list("full"=data_fungi, "mini" = data_fungi_mini, "filt" = d_filt),
+  compute_occurrences = TRUE,
+  compute_taxo_info = TRUE,
+  compute_seq_length = TRUE
+)
+track_wkflow_formattable(track_extra, parent)
 }
 \author{
 Adrien Taudière
