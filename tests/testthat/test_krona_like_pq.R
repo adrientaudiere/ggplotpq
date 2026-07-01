@@ -533,7 +533,7 @@ test_that(".resolve_weights aborts on bad string", {
 }
 
 test_that("all label modes keep angles within [-90, 90]", {
-  for (mode in c("auto", "radial", "tangential")) {
+  for (mode in c("auto", "radial", "tangential", "mixed", "adaptive")) {
     p <- krona_like_pq(
       data_fungi_mini,
       interactive = FALSE,
@@ -843,4 +843,191 @@ test_that("named weight_by is aligned by name, not position", {
   expect_s3_class(p, "ggplot")
   w_resolved <- ggplotpq:::.resolve_weights(data_fungi_mini, w)
   expect_equal(w_resolved[tn], w[tn])
+})
+
+# ---- label_orientation: mixed / adaptive -----------------------------------
+
+test_that("label_orientation = 'mixed' has both tangential and radial layers", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "mixed",
+    check_nestedness = FALSE
+  )
+  lays <- .label_text_layers(p)
+  expect_true(any(vapply(lays, .maps_hjust, logical(1))))
+  expect_true(any(!vapply(lays, .maps_hjust, logical(1))))
+})
+
+test_that("label_orientation = 'mixed' never draws external leader lines", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "mixed",
+    check_nestedness = FALSE
+  )
+  has_seg <- any(vapply(
+    p$layers,
+    function(l) inherits(l$geom, "GeomSegment"),
+    logical(1)
+  ))
+  expect_false(has_seg)
+})
+
+test_that("label_orientation = 'adaptive' returns ggplot", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "adaptive",
+    check_nestedness = FALSE
+  )
+  expect_s3_class(p, "ggplot")
+  lays <- .label_text_layers(p)
+  expect_gt(length(lays), 0)
+})
+
+# ---- dismiss_overlaps -------------------------------------------------------
+
+test_that(".dismiss_overlapping_labels thins a tight angular cluster, keeping the highest value", {
+  df <- data.frame(
+    xmid = c(0, 0.02, 0.04, 3.0),
+    value = c(10, 50, 5, 20)
+  )
+  out <- ggplotpq:::.dismiss_overlapping_labels(df, min_gap = 0.3)
+  expect_false(out$overlap_dismissed[2]) # highest value in the tight cluster
+  expect_true(out$overlap_dismissed[1])
+  expect_true(out$overlap_dismissed[3])
+  expect_false(out$overlap_dismissed[4]) # far away, unaffected
+})
+
+test_that(".dismiss_overlapping_labels never dismisses across different groups", {
+  df <- data.frame(
+    xmid = c(1.0, 1.001),
+    value = c(100, 90)
+  )
+  out <- ggplotpq:::.dismiss_overlapping_labels(
+    df,
+    min_gap = 0.3,
+    group = c(1, 2)
+  )
+  expect_false(any(out$overlap_dismissed))
+})
+
+test_that(".dismiss_overlapping_labels is a no-op for a single row", {
+  df <- data.frame(xmid = 1.5, value = 10)
+  out <- ggplotpq:::.dismiss_overlapping_labels(df)
+  expect_false(out$overlap_dismissed)
+})
+
+test_that("dismiss_overlaps = FALSE restores the unfiltered placement", {
+  p_on <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    dismiss_overlaps = TRUE,
+    check_nestedness = FALSE
+  )
+  p_off <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    dismiss_overlaps = FALSE,
+    check_nestedness = FALSE
+  )
+  n_labels <- function(p) {
+    sum(vapply(.label_text_layers(p), function(l) nrow(l$data), integer(1)))
+  }
+  expect_gte(n_labels(p_off), n_labels(p_on))
+})
+
+# ---- label_fallback / fallback_symbol / fallback_nchar ---------------------
+
+test_that(".fallback_marker_label 'dot' returns the symbol for every name", {
+  out <- ggplotpq:::.fallback_marker_label(c("a", NA, "bcd"), "dot", "*", 3)
+  expect_equal(out, c("*", "*", "*"))
+})
+
+test_that(".fallback_marker_label 'initials' truncates to nchar_cap", {
+  out <- ggplotpq:::.fallback_marker_label(
+    c("Basidiomycota", "Ab"),
+    "initials",
+    "*",
+    3
+  )
+  expect_equal(out, c("Bas", "Ab"))
+})
+
+test_that(".fallback_marker_label 'none' returns NA for every name", {
+  out <- ggplotpq:::.fallback_marker_label(c("a", "b"), "none", "*", 3)
+  expect_true(all(is.na(out)))
+})
+
+test_that("label_fallback = 'initials' shows short names instead of the dot", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_fallback = "initials",
+    fallback_nchar = 3,
+    check_nestedness = FALSE
+  )
+  expect_s3_class(p, "ggplot")
+  marker_layer <- Filter(
+    function(l) inherits(l$geom, "GeomText") && "marker" %in% names(l$data),
+    p$layers
+  )
+  expect_gt(length(marker_layer), 0)
+  markers <- marker_layer[[1]]$data$marker
+  expect_true(all(nchar(markers) <= 3))
+})
+
+test_that("label_fallback = 'none' draws no fallback marker layer", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_fallback = "none",
+    check_nestedness = FALSE
+  )
+  marker_layer <- Filter(
+    function(l) inherits(l$geom, "GeomText") && "marker" %in% names(l$data),
+    p$layers
+  )
+  expect_equal(length(marker_layer), 0)
+})
+
+test_that("fallback_symbol changes the dot glyph", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_fallback = "dot",
+    fallback_symbol = "+",
+    check_nestedness = FALSE
+  )
+  marker_layer <- Filter(
+    function(l) inherits(l$geom, "GeomText") && "marker" %in% names(l$data),
+    p$layers
+  )
+  expect_gt(length(marker_layer), 0)
+  expect_true(all(marker_layer[[1]]$data$marker == "+"))
+})
+
+test_that("invalid fallback_symbol aborts", {
+  expect_error(
+    krona_like_pq(data_fungi_mini, interactive = FALSE, fallback_symbol = ""),
+    "fallback_symbol"
+  )
+})
+
+test_that("invalid fallback_nchar aborts", {
+  expect_error(
+    krona_like_pq(data_fungi_mini, interactive = FALSE, fallback_nchar = 0),
+    "fallback_nchar"
+  )
+})
+
+test_that("invalid label_fallback aborts", {
+  expect_error(
+    krona_like_pq(
+      data_fungi_mini,
+      interactive = FALSE,
+      label_fallback = "wrong"
+    )
+  )
 })
