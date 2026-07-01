@@ -6,3 +6,8 @@
 ^\.claude$
 ^LICENSE\.md$
 ^README\.Rmd$
+^CONTEXT\.md$
+^README\.html$
+^Rplots\.pdf$
+^audits$
+^dev$
