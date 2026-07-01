@@ -70,6 +70,12 @@ wheat_plot <- function(
     cli::cli_abort("{.arg xvar} must refer to a numeric column.")
   }
 
+  if (nrow(dat) == 0L || all(is.na(dat$x_value))) {
+    cli::cli_abort(
+      "{.arg data} must contain at least one non-missing {.arg xvar} value."
+    )
+  }
+
   if (is.null(binwidth)) {
     iqr <- stats::IQR(dat$x_value, na.rm = TRUE)
     n <- sum(!is.na(dat$x_value))

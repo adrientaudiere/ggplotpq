@@ -72,7 +72,9 @@
 .pq_extract_outlier_pts <- function(built, axis, main_min, main_max) {
   other <- if (axis == "y") "x" else "y"
   res <- data.frame(
-    pos = numeric(0), val = numeric(0), direction = character(0),
+    pos = numeric(0),
+    val = numeric(0),
+    direction = character(0),
     stringsAsFactors = FALSE
   )
   for (layer in built$data) {
@@ -87,12 +89,15 @@
     )
     for (case in cases) {
       if (any(case$mask)) {
-        res <- rbind(res, data.frame(
-          pos = pos[case$mask],
-          val = vals[case$mask],
-          direction = case$dir,
-          stringsAsFactors = FALSE
-        ))
+        res <- rbind(
+          res,
+          data.frame(
+            pos = pos[case$mask],
+            val = vals[case$mask],
+            direction = case$dir,
+            stringsAsFactors = FALSE
+          )
+        )
       }
     }
   }
@@ -207,9 +212,12 @@ break_outlier_axis <- function(
   axis <- match.arg(axis, c("y", "x", "both"))
   spec <- structure(
     list(
-      cutoff = cutoff, axis = axis,
-      space = space, space_proportional = space_proportional,
-      scales = scales, expand = expand,
+      cutoff = cutoff,
+      axis = axis,
+      space = space,
+      space_proportional = space_proportional,
+      scales = scales,
+      expand = expand,
       expand_cluster = expand_cluster
     ),
     class = "break_outlier_axis_spec"
@@ -223,7 +231,15 @@ break_outlier_axis <- function(
 
   built <- ggplot2::ggplot_build(p)
   p <- .pq_apply_axis_breaks(
-    p, built, axis, cutoff, space, space_proportional, scales, expand, expand_cluster
+    p,
+    built,
+    axis,
+    cutoff,
+    space,
+    space_proportional,
+    scales,
+    expand,
+    expand_cluster
   )
   p
 }
@@ -231,7 +247,15 @@ break_outlier_axis <- function(
 #' Internal: apply ggbreak scales after gap detection
 #' @noRd
 .pq_apply_axis_breaks <- function(
-  plt, built, axis, cutoff, space, space_proportional, scales, expand, expand_cluster
+  plt,
+  built,
+  axis,
+  cutoff,
+  space,
+  space_proportional,
+  scales,
+  expand,
+  expand_cluster
 ) {
   apply_one_axis <- function(p2, ax) {
     vals <- .pq_extract_axis_values(built, ax)
@@ -289,27 +313,36 @@ break_outlier_axis <- function(
         # Upper panel shows exactly 2 tick values: one nice round value just
         # above the gap boundary and the outlier maximum.
         upper_vals <- pos_vals[pos_vals > adjusted_gap[2]]
-        upper_max <- if (length(upper_vals) > 0) max(upper_vals) else adjusted_gap[2]
+        upper_max <- if (length(upper_vals) > 0) {
+          max(upper_vals)
+        } else {
+          adjusted_gap[2]
+        }
         nice_up <- pretty(c(adjusted_gap[2], upper_max), n = 2)
         tick_lo <- nice_up[nice_up >= adjusted_gap[2]]
         tick_lo <- if (length(tick_lo) > 0) tick_lo[1] else adjusted_gap[2]
         tick_labels <- unique(c(tick_lo, upper_max))
-        p2 <- p2 + ggbreak::scale_y_break(
-          adjusted_gap,
-          space = sp,
-          scales = sc,
-          expand = expand,
-          ticklabels = tick_labels
-        )
+        p2 <- p2 +
+          ggbreak::scale_y_break(
+            adjusted_gap,
+            space = sp,
+            scales = sc,
+            expand = expand,
+            ticklabels = tick_labels
+          )
       }
       # Ensure the break-boundary value appears on the y-axis of the lower panel
       bnd <- boundary_ticks
-      p2 <- p2 + ggplot2::scale_y_continuous(
-        breaks = function(x) sort(unique(c(scales::breaks_pretty(n = 5)(x), bnd)))
-      )
-      p2 <- p2 + ggplot2::theme(
-        axis.line.y = ggplot2::element_line(color = "black", linewidth = 0.5)
-      )
+      p2 <- p2 +
+        ggplot2::scale_y_continuous(
+          breaks = function(x) {
+            sort(unique(c(scales::breaks_pretty(n = 5)(x), bnd)))
+          }
+        )
+      p2 <- p2 +
+        ggplot2::theme(
+          axis.line.y = ggplot2::element_line(color = "black", linewidth = 0.5)
+        )
     } else {
       boundary_ticks <- numeric(0)
       for (gap in cluster$gaps) {
@@ -339,32 +372,45 @@ break_outlier_axis <- function(
           scales
         }
         right_vals <- pos_vals[pos_vals > adjusted_gap[2]]
-        right_max <- if (length(right_vals) > 0) max(right_vals) else adjusted_gap[2]
+        right_max <- if (length(right_vals) > 0) {
+          max(right_vals)
+        } else {
+          adjusted_gap[2]
+        }
         nice_up <- pretty(c(adjusted_gap[2], right_max), n = 2)
         tick_lo <- nice_up[nice_up >= adjusted_gap[2]]
         tick_lo <- if (length(tick_lo) > 0) tick_lo[1] else adjusted_gap[2]
         tick_labels <- unique(c(tick_lo, right_max))
-        p2 <- p2 + ggbreak::scale_x_break(
-          adjusted_gap,
-          space = sp,
-          scales = sc,
-          expand = expand,
-          ticklabels = tick_labels
-        )
+        p2 <- p2 +
+          ggbreak::scale_x_break(
+            adjusted_gap,
+            space = sp,
+            scales = sc,
+            expand = expand,
+            ticklabels = tick_labels
+          )
       }
       bnd <- boundary_ticks
-      p2 <- p2 + ggplot2::scale_x_continuous(
-        breaks = function(x) sort(unique(c(scales::breaks_pretty(n = 5)(x), bnd)))
-      )
-      p2 <- p2 + ggplot2::theme(
-        axis.line.x = ggplot2::element_line(color = "black", linewidth = 0.5)
-      )
+      p2 <- p2 +
+        ggplot2::scale_x_continuous(
+          breaks = function(x) {
+            sort(unique(c(scales::breaks_pretty(n = 5)(x), bnd)))
+          }
+        )
+      p2 <- p2 +
+        ggplot2::theme(
+          axis.line.x = ggplot2::element_line(color = "black", linewidth = 0.5)
+        )
     }
     p2
   }
 
-  if (axis %in% c("y", "both")) plt <- apply_one_axis(plt, "y")
-  if (axis %in% c("x", "both")) plt <- apply_one_axis(plt, "x")
+  if (axis %in% c("y", "both")) {
+    plt <- apply_one_axis(plt, "y")
+  }
+  if (axis %in% c("x", "both")) {
+    plt <- apply_one_axis(plt, "x")
+  }
   plt
 }
 
@@ -376,7 +422,8 @@ ggplot_add.break_outlier_axis_spec <- function(object, plot, ...) {
   }
   built <- ggplot2::ggplot_build(plot)
   .pq_apply_axis_breaks(
-    plot, built,
+    plot,
+    built,
     axis = object$axis,
     cutoff = object$cutoff,
     space = object$space,
@@ -435,6 +482,9 @@ ggplot_add.break_outlier_axis_spec <- function(object, plot, ...) {
 #' @param label_angle (numeric, default `0`) Angle in degrees for outlier value
 #'   labels. Use e.g. `90` when many outliers are close together and labels
 #'   overlap horizontally.
+#' @param bar_gradient (logical, default `TRUE`) If `TRUE`, draw the outlier
+#'   arrows with a colour gradient along their length; if `FALSE`, use a solid
+#'   `arrow_color`.
 #'
 #' @return A modified [ggplot2::ggplot] object with [ggplot2::coord_cartesian()]
 #'   applied (overriding any existing coordinate system) and outlier arrows
@@ -525,7 +575,7 @@ zoom_outlier_axis <- function(
     if (!is.null(label_format)) {
       sprintf(label_format, x)
     } else {
-      trimws(format(x, big.mark = " ", digits = 3, scientific = FALSE))
+      trimws(format(x, big.mark = "\u202f", digits = 3, scientific = FALSE))
     }
   }
 
@@ -565,21 +615,31 @@ zoom_outlier_axis <- function(
           a_start <- plot_max - zoom_range * 0.04
           a_end <- plot_max + zoom_range * 0.06
           if (ax == "y") {
-            annotations <- c(annotations, list(list(
-              ax = "y", direction = "high",
-              x = pos_val,
-              y_start = a_start, y_end = a_end,
-              label = fmt_val(extreme_val),
-              label_coord = a_end + zoom_range * 0.02
-            )))
+            annotations <- c(
+              annotations,
+              list(list(
+                ax = "y",
+                direction = "high",
+                x = pos_val,
+                y_start = a_start,
+                y_end = a_end,
+                label = fmt_val(extreme_val),
+                label_coord = a_end + zoom_range * 0.02
+              ))
+            )
           } else {
-            annotations <- c(annotations, list(list(
-              ax = "x", direction = "high",
-              y = pos_val,
-              x_start = a_start, x_end = a_end,
-              label = fmt_val(extreme_val),
-              label_coord = a_end + zoom_range * 0.02
-            )))
+            annotations <- c(
+              annotations,
+              list(list(
+                ax = "x",
+                direction = "high",
+                y = pos_val,
+                x_start = a_start,
+                x_end = a_end,
+                label = fmt_val(extreme_val),
+                label_coord = a_end + zoom_range * 0.02
+              ))
+            )
           }
         }
 
@@ -590,21 +650,31 @@ zoom_outlier_axis <- function(
           a_start <- plot_min + zoom_range * 0.04
           a_end <- plot_min - zoom_range * 0.06
           if (ax == "y") {
-            annotations <- c(annotations, list(list(
-              ax = "y", direction = "low",
-              x = pos_val,
-              y_start = a_start, y_end = a_end,
-              label = fmt_val(extreme_val),
-              label_coord = a_end - zoom_range * 0.02
-            )))
+            annotations <- c(
+              annotations,
+              list(list(
+                ax = "y",
+                direction = "low",
+                x = pos_val,
+                y_start = a_start,
+                y_end = a_end,
+                label = fmt_val(extreme_val),
+                label_coord = a_end - zoom_range * 0.02
+              ))
+            )
           } else {
-            annotations <- c(annotations, list(list(
-              ax = "x", direction = "low",
-              y = pos_val,
-              x_start = a_start, x_end = a_end,
-              label = fmt_val(extreme_val),
-              label_coord = a_end - zoom_range * 0.02
-            )))
+            annotations <- c(
+              annotations,
+              list(list(
+                ax = "x",
+                direction = "low",
+                y = pos_val,
+                x_start = a_start,
+                x_end = a_end,
+                label = fmt_val(extreme_val),
+                label_coord = a_end - zoom_range * 0.02
+              ))
+            )
           }
         }
       }
@@ -616,18 +686,27 @@ zoom_outlier_axis <- function(
     if (ax == "y" && bar_gradient) {
       a_start_hi <- plot_max - zoom_range * 0.04
       for (ld in built$data) {
-        if (!("xmin" %in% names(ld) && "xmax" %in% names(ld))) next
-        if (!("y" %in% names(ld))) next
+        if (!("xmin" %in% names(ld) && "xmax" %in% names(ld))) {
+          next
+        }
+        if (!("y" %in% names(ld))) {
+          next
+        }
         outlier_rows <- ld[is.finite(ld$y) & ld$y > main_max, , drop = FALSE]
-        if (nrow(outlier_rows) == 0) next
+        if (nrow(outlier_rows) == 0) {
+          next
+        }
         for (i in seq_len(nrow(outlier_rows))) {
-          bar_fades <- c(bar_fades, list(list(
-            xmin = outlier_rows$xmin[i],
-            xmax = outlier_rows$xmax[i],
-            # Gradient covers from arrow-start downward 20% of zoom range
-            ymin = a_start_hi - zoom_range * 0.20,
-            ymax = a_start_hi
-          )))
+          bar_fades <- c(
+            bar_fades,
+            list(list(
+              xmin = outlier_rows$xmin[i],
+              xmax = outlier_rows$xmax[i],
+              # Gradient covers from arrow-start downward 20% of zoom range
+              ymin = a_start_hi - zoom_range * 0.20,
+              ymax = a_start_hi
+            ))
+          )
         }
       }
     }
@@ -686,9 +765,13 @@ zoom_outlier_axis <- function(
     p <- p +
       ggplot2::annotate(
         "rect",
-        xmin = bf$xmin, xmax = bf$xmax,
-        ymin = bf$ymin, ymax = bf$ymax,
-        fill = "white", alpha = 0.75, color = NA
+        xmin = bf$xmin,
+        xmax = bf$xmax,
+        ymin = bf$ymin,
+        ymax = bf$ymax,
+        fill = "white",
+        alpha = 0.75,
+        color = NA
       )
   }
 
@@ -702,8 +785,10 @@ zoom_outlier_axis <- function(
       p <- p +
         ggplot2::annotate(
           "segment",
-          x = ann$x, xend = ann$x,
-          y = ann$y_start, yend = ann$y_end,
+          x = ann$x,
+          xend = ann$x,
+          y = ann$y_start,
+          yend = ann$y_end,
           colour = arrow_color,
           arrow = arrow_spec
         ) +
@@ -721,8 +806,10 @@ zoom_outlier_axis <- function(
       p <- p +
         ggplot2::annotate(
           "segment",
-          x = ann$x_start, xend = ann$x_end,
-          y = ann$y, yend = ann$y,
+          x = ann$x_start,
+          xend = ann$x_end,
+          y = ann$y,
+          yend = ann$y,
           colour = arrow_color,
           arrow = arrow_spec
         ) +
@@ -743,24 +830,35 @@ zoom_outlier_axis <- function(
   # drawn outside the panel (clip = "off"), so they are not cut by the device.
   if (extra_margin > 0 && length(all_ann) > 0) {
     has_high_y <- any(vapply(
-      all_ann, function(a) a$ax == "y" && a$direction == "high", logical(1)
+      all_ann,
+      function(a) a$ax == "y" && a$direction == "high",
+      logical(1)
     ))
     has_low_y <- any(vapply(
-      all_ann, function(a) a$ax == "y" && a$direction == "low", logical(1)
+      all_ann,
+      function(a) a$ax == "y" && a$direction == "low",
+      logical(1)
     ))
     has_high_x <- any(vapply(
-      all_ann, function(a) a$ax == "x" && a$direction == "high", logical(1)
+      all_ann,
+      function(a) a$ax == "x" && a$direction == "high",
+      logical(1)
     ))
     has_low_x <- any(vapply(
-      all_ann, function(a) a$ax == "x" && a$direction == "low", logical(1)
+      all_ann,
+      function(a) a$ax == "x" && a$direction == "low",
+      logical(1)
     ))
-    p <- p + ggplot2::theme(plot.margin = ggplot2::margin(
-      t = if (has_high_y) extra_margin else 5.5,
-      r = if (has_high_x) extra_margin else 5.5,
-      b = if (has_low_y) extra_margin else 5.5,
-      l = if (has_low_x) extra_margin else 5.5,
-      unit = "pt"
-    ))
+    p <- p +
+      ggplot2::theme(
+        plot.margin = ggplot2::margin(
+          t = if (has_high_y) extra_margin else 5.5,
+          r = if (has_high_x) extra_margin else 5.5,
+          b = if (has_low_y) extra_margin else 5.5,
+          l = if (has_low_x) extra_margin else 5.5,
+          unit = "pt"
+        )
+      )
   }
 
   p

@@ -654,7 +654,9 @@ community_sharing_plot <- function(
     dplyr::group_by(.data[[pie_taxrank]]) |>
     dplyr::summarise(total = sum(count), .groups = "drop")
   n_keep <- min(max_taxa, length(real_taxa))
-  top_n <- total_abund[[pie_taxrank]][order(-total_abund$total)][seq_len(n_keep)]
+  top_n <- total_abund[[pie_taxrank]][order(-total_abund$total)][seq_len(
+    n_keep
+  )]
 
   otu_long$taxon_group <- ifelse(
     otu_long[[pie_taxrank]] %in% top_n,
@@ -753,14 +755,14 @@ community_sharing_plot <- function(
     sig_rows_y <- legend_y0 + legend_step * (n_met + c(3.5, 4.5))
 
     perm_desc <- sprintf(
-      "%d label permutations (group sizes preserved); p = prop(perm ≥ obs)",
+      "%d label permutations (group sizes preserved); p = prop(perm \u2265 obs)",
       n_perm
     )
 
     sig_legend_df <- dplyr::tibble(
       label = c(
-        sprintf("p < %g — significant", sig_threshold),
-        sprintf("p ≥ %g — not significant", sig_threshold)
+        sprintf("p < %g \u2014 significant", sig_threshold),
+        sprintf("p \u2265 %g \u2014 not significant", sig_threshold)
       ),
       y = sig_rows_y,
       sig = c(TRUE, FALSE)
@@ -1000,7 +1002,7 @@ community_sharing_barplot <- function(
   )
 
   plot_df <- pairs_df |>
-    dplyr::mutate(pair = paste0(from, " — ", to)) |>
+    dplyr::mutate(pair = paste0(from, " \u2014 ", to)) |>
     tidyr::pivot_longer(
       dplyr::all_of(names(metrics)),
       names_to = "metric",

@@ -21,7 +21,8 @@ utils::globalVariables(c(
   "y_in",
   "y_lab",
   "y0",
-  "y1"
+  "y1",
+  "marker"
 ))
 
 # ---- weights ---------------------------------------------------------------
@@ -908,6 +909,59 @@ utils::globalVariables(c(
   out
 }
 
+# ---- Thin out radially-oriented labels that would visually collide --------
+# Radially-reading labels are anchored at a single point and read outward
+# along their own ray; two anchors close together in angle crowd their glyphs,
+# because neither is bounded by a wedge wall in the reading direction.
+# `min_gap` is a flat angular budget (radians). Collisions are only possible
+# between labels that share the same starting radius -- pass `group` (e.g. the
+# originating ring/depth) so a parent and child that happen to share almost
+# the same angle (a dominant single-child lineage) are never compared, since
+# they are drawn on physically different rings and cannot visually collide.
+# Greedily keeps the highest-value label first, within each group, so bigger
+# sections win crowded neighbourhoods.
+.dismiss_overlapping_labels <- function(df, min_gap = 0.26, group = NULL) {
+  df$overlap_dismissed <- rep(FALSE, nrow(df))
+  if (nrow(df) <= 1) {
+    return(df)
+  }
+  if (is.null(group)) {
+    group <- rep(1L, nrow(df))
+  }
+  ord <- order(-df$value)
+  kept_ang <- list()
+  keep <- rep(FALSE, nrow(df))
+  for (i in ord) {
+    g <- as.character(group[i])
+    ang_i <- df$xmid[i]
+    prev <- kept_ang[[g]]
+    ok <- is.null(prev) ||
+      all(abs(((prev - ang_i + pi) %% (2 * pi)) - pi) >= min_gap)
+    if (ok) {
+      keep[i] <- TRUE
+      kept_ang[[g]] <- c(prev, ang_i)
+    }
+  }
+  df$overlap_dismissed <- !keep
+  df
+}
+
+# ---- Marker shown in place of a label that could not be drawn -------------
+# `style`: "dot" (a single, customisable glyph), "initials" (the first
+# `nchar_cap` characters of the name), or "none" (nothing -- caller drops the
+# row). Vectorised over `name`.
+.fallback_marker_label <- function(name, style, symbol, nchar_cap) {
+  if (style == "none") {
+    return(rep(NA_character_, length(name)))
+  }
+  if (style == "initials") {
+    out <- substr(ifelse(is.na(name), "", name), 1, nchar_cap)
+    out[out == ""] <- symbol
+    return(out)
+  }
+  rep(symbol, length(name))
+}
+
 # ---- Static ggplot path ----------------------------------------------------
 .krona_static <- function(
   hier,
@@ -917,6 +971,10 @@ utils::globalVariables(c(
   show_center_count = TRUE,
   label_pct = "none",
   label_orientation = "auto",
+  dismiss_overlaps = TRUE,
+  label_fallback = "dot",
+  fallback_symbol = "·",
+  fallback_nchar = 3,
   use_gradient = FALSE,
   val_range = NULL,
   gradient_name = NULL,
@@ -1006,7 +1064,7 @@ utils::globalVariables(c(
           y = 0,
           label = paste0(
             "n = ",
-            format(round(total_weight), big.mark = " ", scientific = FALSE)
+            format(round(total_weight), big.mark = "\u202f", scientific = FALSE)
           ),
           size = 3,
           color = "#333333",
@@ -1016,19 +1074,44 @@ utils::globalVariables(c(
 
     # ---- Section labels -----------------------------------------------------
     # `label_orientation`:
-    #   "auto" (default): internal labels run tangentially, centred on their
-    #     wedge, and are shown only when the name fits within the arc -- so they
-    #     stay inside their ring and never overlap neighbours; leaf labels are
-    #     placed OUTSIDE the rim, radial and reading outward, each linked to its
-    #     wedge by a short grey leader line.
+    #   "auto" (default): internal labels are radial, anchored at the band
+    #     inner edge; leaf labels are placed OUTSIDE the rim, radial and
+    #     reading outward, each linked to its wedge by a short grey leader
+    #     line.
     #   "radial": every label is radial, anchored at the band inner edge,
     #     reading outward inside the circle (Krona style).
-    #   "tangential": every label runs along its arc, centred in the band.
+    #   "tangential": every label runs along its arc, centred in the band,
+    #     shown only when it fits.
+    #   "mixed": internal labels are tangential (circular); leaf labels are
+    #     radial, anchored at the band inner edge (never outside the rim).
+    #   "adaptive": every label tries tangential first, falls back to radial
+    #     when it does not fit the arc, and is hidden (fallback marker) when
+    #     neither fits.
     # Merged fill chains (one spanning rect) are labelled once, as a leaf.
-    # Rotation is normalised to [-90, 90] so text is never upside-down; wedges
-    # with no room get a small dot.
+    # Rotation is normalised to [-90, 90] so text is never upside-down.
+    # Regardless of mode, any radially-oriented label (internal or leaf) can
+    # additionally be thinned by `dismiss_overlaps` when it would visually
+    # collide with a denser neighbour; wedges with no room, and labels
+    # dismissed for overlap, get the `label_fallback` marker instead.
     mode <- label_orientation
     rim <- max_depth + 1
+    internal_style <- if (mode %in% c("tangential", "mixed")) {
+      "tangential"
+    } else if (mode == "adaptive") {
+      "adaptive"
+    } else {
+      "radial"
+    }
+    leaf_style <- if (mode == "tangential") {
+      "tangential"
+    } else if (mode == "adaptive") {
+      "adaptive"
+    } else if (mode == "auto") {
+      "callout"
+    } else {
+      "inline"
+    }
+    leaf_radial_style <- if (leaf_style == "callout") "callout" else "inline"
 
     lab_df <- df
     lab_df$xmid <- (lab_df$x0 + lab_df$x1) / 2
@@ -1072,57 +1155,71 @@ utils::globalVariables(c(
 
     inner_df <- lab_df[!lab_df$is_leaf, , drop = FALSE]
     leaf_df <- lab_df[lab_df$is_leaf, , drop = FALSE]
-    dots <- lab_df[0, , drop = FALSE]
-    dot_cols <- names(dots)
+    dot_cols <- names(lab_df)
+    fallback <- lab_df[0, dot_cols, drop = FALSE]
+    fallback$leader <- logical(0)
 
     # ---- internal labels --------------------------------------------------
     if (nrow(inner_df) > 0) {
       inner_df$ymid <- inner_df$depth + 0.5
-      if (mode == "tangential") {
-        # tangential, centred, shown only when the name fits the arc
-        inner_df$lab <- .truncate_label_middle(inner_df$lab, 34)
-        fits <- nchar(inner_df$lab) * cw <= inner_df$arcw * inner_df$ymid
-        show <- inner_df[fits, , drop = FALSE]
-        dots <- rbind(
-          dots,
-          inner_df[!fits & inner_df$arcw > 0.05, dot_cols, drop = FALSE]
-        )
-        if (nrow(show) > 0) {
-          show$ang <- ang_tang_of(show$xmid)
-          p <- p +
-            ggplot2::geom_text(
-              data = show,
-              ggplot2::aes(
-                x = xmid,
-                y = ymid,
-                label = lab,
-                angle = ang,
-                colour = col
-              ),
-              hjust = 0.5,
-              size = sz_inner,
-              fontface = "bold"
-            )
-        }
+      room <- pmin(rim - inner_df$depth, 1.9)
+      maxch <- pmax(4L, floor(room / 0.085))
+      tang_lab <- .truncate_label_middle(inner_df$lab, 34)
+      rad_lab <- .truncate_label_middle(inner_df$lab, maxch)
+      tang_fits <- nchar(tang_lab) * cw <= inner_df$arcw * inner_df$ymid
+      rad_fits <- inner_df$arcw * inner_df$ymid >= 0.30
+
+      if (internal_style == "tangential") {
+        use_tang <- tang_fits
+        use_rad <- rep(FALSE, nrow(inner_df))
+      } else if (internal_style == "adaptive") {
+        use_tang <- tang_fits
+        use_rad <- !tang_fits & rad_fits
       } else {
-        # auto / radial: radial, reading outward from the band inner edge,
-        # centred on the wedge and shortened to the radial room (capped so a
-        # label does not run across more than ~two rings).
-        room <- pmin(rim - inner_df$depth, 1.9)
-        maxch <- pmax(4L, floor(room / 0.085))
-        inner_df$lab <- .truncate_label_middle(inner_df$lab, maxch)
-        keep <- inner_df$arcw * inner_df$ymid >= 0.30
-        show <- inner_df[keep, , drop = FALSE]
-        dots <- rbind(
-          dots,
-          inner_df[!keep & inner_df$arcw > 0.05, dot_cols, drop = FALSE]
-        )
-        if (nrow(show) > 0) {
-          show$ang <- ang_radial_of(show$xmid)
-          show$y_in <- show$depth + 0.06
+        use_tang <- rep(FALSE, nrow(inner_df))
+        use_rad <- rad_fits
+      }
+
+      if (any(use_tang)) {
+        show_tang <- inner_df[use_tang, , drop = FALSE]
+        show_tang$lab <- tang_lab[use_tang]
+        show_tang$ang <- ang_tang_of(show_tang$xmid)
+        p <- p +
+          ggplot2::geom_text(
+            data = show_tang,
+            ggplot2::aes(
+              x = xmid,
+              y = ymid,
+              label = lab,
+              angle = ang,
+              colour = col
+            ),
+            hjust = 0.5,
+            size = sz_inner,
+            fontface = "bold"
+          )
+      }
+
+      overlap_dismissed <- rep(FALSE, nrow(inner_df))
+      if (any(use_rad)) {
+        show_rad <- inner_df[use_rad, , drop = FALSE]
+        show_rad$lab <- rad_lab[use_rad]
+        show_rad$y_in <- show_rad$depth + 0.06
+        if (dismiss_overlaps) {
+          show_rad <- .dismiss_overlapping_labels(
+            show_rad,
+            group = show_rad$depth
+          )
+        } else {
+          show_rad$overlap_dismissed <- FALSE
+        }
+        overlap_dismissed[use_rad] <- show_rad$overlap_dismissed
+        drawn <- show_rad[!show_rad$overlap_dismissed, , drop = FALSE]
+        if (nrow(drawn) > 0) {
+          drawn$ang <- ang_radial_of(drawn$xmid)
           p <- p +
             ggplot2::geom_text(
-              data = show,
+              data = drawn,
               ggplot2::aes(
                 x = xmid,
                 y = y_in,
@@ -1136,98 +1233,181 @@ utils::globalVariables(c(
               fontface = "bold"
             )
         }
+      }
+
+      no_room <- !use_tang & !use_rad
+      fb_idx <- (no_room | overlap_dismissed) & inner_df$arcw > 0.05
+      if (any(fb_idx)) {
+        fb_rows <- inner_df[fb_idx, dot_cols, drop = FALSE]
+        fb_rows$leader <- FALSE
+        fallback <- rbind(fallback, fb_rows)
       }
     }
 
     # ---- leaf labels ------------------------------------------------------
     if (nrow(leaf_df) > 0) {
-      keep <- leaf_df$arcw * rim >= 0.5
-      show <- leaf_df[keep, , drop = FALSE]
-      dots <- rbind(
-        dots,
-        leaf_df[!keep & leaf_df$arcw > 0.05, dot_cols, drop = FALSE]
-      )
-      if (nrow(show) > 0) {
-        if (mode == "auto") {
-          # external callouts: short leader line + radial label outside the rim
-          show$lab <- .truncate_label_middle(show$lab, 40)
-          show$ang <- ang_radial_of(show$xmid)
-          show$y0 <- rim
-          show$y1 <- rim + 0.12
-          show$y_lab <- rim + 0.18
-          p <- p +
-            ggplot2::geom_segment(
-              data = show,
-              ggplot2::aes(x = xmid, xend = xmid, y = y0, yend = y1),
-              colour = "#999999",
-              linewidth = 0.25
-            ) +
-            ggplot2::geom_text(
-              data = show,
-              ggplot2::aes(
-                x = xmid,
-                y = y_lab,
-                label = lab,
-                angle = ang,
-                hjust = hj_side,
-                colour = col
-              ),
-              vjust = 0.5,
-              size = sz_leaf,
-              fontface = "bold"
-            )
-        } else if (mode == "radial") {
-          show$lab <- .truncate_label_middle(show$lab, 34)
-          show$ang <- ang_radial_of(show$xmid)
-          show$y_in <- show$depth + 0.06
-          p <- p +
-            ggplot2::geom_text(
-              data = show,
-              ggplot2::aes(
-                x = xmid,
-                y = y_in,
-                label = lab,
-                angle = ang,
-                hjust = hj_side,
-                colour = col
-              ),
-              vjust = 0.5,
-              size = sz_leaf,
-              fontface = "bold"
-            )
+      leaf_df$ymid <- (leaf_df$depth + leaf_df$depthmax) / 2
+      tang_lab <- .truncate_label_middle(leaf_df$lab, 34)
+      tang_fits <- nchar(tang_lab) * cw <= leaf_df$arcw * leaf_df$ymid
+      rad_fits <- leaf_df$arcw * rim >= 0.5
+
+      if (leaf_style == "tangential") {
+        use_tang <- tang_fits
+        use_rad <- rep(FALSE, nrow(leaf_df))
+      } else if (leaf_style == "adaptive") {
+        use_tang <- tang_fits
+        use_rad <- !tang_fits & rad_fits
+      } else {
+        use_tang <- rep(FALSE, nrow(leaf_df))
+        use_rad <- rad_fits
+      }
+
+      if (any(use_tang)) {
+        # tangential: centred along the arc, in the (spanning) leaf band
+        show_tang <- leaf_df[use_tang, , drop = FALSE]
+        show_tang$lab <- tang_lab[use_tang]
+        show_tang$ang <- ang_tang_of(show_tang$xmid)
+        p <- p +
+          ggplot2::geom_text(
+            data = show_tang,
+            ggplot2::aes(
+              x = xmid,
+              y = ymid,
+              label = lab,
+              angle = ang,
+              colour = col
+            ),
+            hjust = 0.5,
+            size = sz_leaf,
+            fontface = "bold"
+          )
+      }
+
+      overlap_dismissed <- rep(FALSE, nrow(leaf_df))
+      if (any(use_rad)) {
+        show_rad <- leaf_df[use_rad, , drop = FALSE]
+        show_rad$lab <- .truncate_label_middle(
+          show_rad$lab,
+          if (leaf_radial_style == "callout") 40 else 34
+        )
+        show_rad$y_in <- if (leaf_radial_style == "callout") {
+          rep(rim, nrow(show_rad))
         } else {
-          # tangential: centred along the arc, in the (spanning) leaf band
-          show$lab <- .truncate_label_middle(show$lab, 34)
-          show$ymid <- (show$depth + show$depthmax) / 2
-          show$ang <- ang_tang_of(show$xmid)
-          p <- p +
-            ggplot2::geom_text(
-              data = show,
-              ggplot2::aes(
-                x = xmid,
-                y = ymid,
-                label = lab,
-                angle = ang,
-                colour = col
-              ),
-              hjust = 0.5,
-              size = sz_leaf,
-              fontface = "bold"
-            )
+          show_rad$depth + 0.06
         }
+        if (dismiss_overlaps) {
+          # Callouts all share one visual ring outside the rim regardless of
+          # originating depth, so compare them globally; inline leaf labels
+          # keep their own starting depth as a physical ring, like internal.
+          dismiss_group <- if (leaf_radial_style == "callout") {
+            NULL
+          } else {
+            show_rad$depth
+          }
+          show_rad <- .dismiss_overlapping_labels(
+            show_rad,
+            group = dismiss_group
+          )
+        } else {
+          show_rad$overlap_dismissed <- FALSE
+        }
+        overlap_dismissed[use_rad] <- show_rad$overlap_dismissed
+        drawn <- show_rad[!show_rad$overlap_dismissed, , drop = FALSE]
+        if (nrow(drawn) > 0) {
+          drawn$ang <- ang_radial_of(drawn$xmid)
+          if (leaf_radial_style == "callout") {
+            # external callouts: short leader line + radial label outside the rim
+            drawn$y0 <- rim
+            drawn$y1 <- rim + 0.12
+            drawn$y_lab <- rim + 0.18
+            p <- p +
+              ggplot2::geom_segment(
+                data = drawn,
+                ggplot2::aes(x = xmid, xend = xmid, y = y0, yend = y1),
+                colour = "#999999",
+                linewidth = 0.25
+              ) +
+              ggplot2::geom_text(
+                data = drawn,
+                ggplot2::aes(
+                  x = xmid,
+                  y = y_lab,
+                  label = lab,
+                  angle = ang,
+                  hjust = hj_side,
+                  colour = col
+                ),
+                vjust = 0.5,
+                size = sz_leaf,
+                fontface = "bold"
+              )
+          } else {
+            p <- p +
+              ggplot2::geom_text(
+                data = drawn,
+                ggplot2::aes(
+                  x = xmid,
+                  y = y_in,
+                  label = lab,
+                  angle = ang,
+                  hjust = hj_side,
+                  colour = col
+                ),
+                vjust = 0.5,
+                size = sz_leaf,
+                fontface = "bold"
+              )
+          }
+        }
+      }
+
+      no_room <- !use_tang & !use_rad
+      fb_idx <- (no_room | overlap_dismissed) & leaf_df$arcw > 0.05
+      if (any(fb_idx)) {
+        fb_rows <- leaf_df[fb_idx, dot_cols, drop = FALSE]
+        fb_rows$leader <- leaf_radial_style == "callout"
+        fallback <- rbind(fallback, fb_rows)
       }
     }
 
-    # ---- dots for wedges with no room -------------------------------------
-    if (nrow(dots) > 0) {
-      dots$ymid <- ifelse(dots$is_leaf, rim - 0.5, dots$depth + 0.5)
-      dots$col <- ifelse(dots$is_leaf | dots$is_aggregate, "#444444", "white")
+    # ---- fallback markers: no room, or dismissed for overlap ---------------
+    if (nrow(fallback) > 0) {
+      fallback$marker <- .fallback_marker_label(
+        fallback$name,
+        label_fallback,
+        fallback_symbol,
+        fallback_nchar
+      )
+      fallback <- fallback[!is.na(fallback$marker), , drop = FALSE]
+    }
+    if (nrow(fallback) > 0) {
+      fallback$ymid <- ifelse(
+        fallback$leader,
+        rim + 0.1,
+        ifelse(fallback$is_leaf, rim - 0.5, fallback$depth + 0.5)
+      )
+      fallback$col <- ifelse(
+        fallback$is_leaf | fallback$is_aggregate,
+        "#444444",
+        "white"
+      )
+      leader_rows <- fallback[fallback$leader, , drop = FALSE]
+      if (nrow(leader_rows) > 0) {
+        leader_rows$y0 <- rim
+        leader_rows$y1 <- rim + 0.06
+        p <- p +
+          ggplot2::geom_segment(
+            data = leader_rows,
+            ggplot2::aes(x = xmid, xend = xmid, y = y0, yend = y1),
+            colour = "#bbbbbb",
+            linewidth = 0.2
+          )
+      }
       p <- p +
         ggplot2::geom_text(
-          data = dots,
-          ggplot2::aes(x = xmid, y = ymid, colour = col),
-          label = "·",
-          size = 3
+          data = fallback,
+          ggplot2::aes(x = xmid, y = ymid, label = marker, colour = col),
+          size = if (label_fallback == "initials") 2 else 3
         )
     }
 
@@ -1459,8 +1639,39 @@ utils::globalVariables(c(
 #'   by a short grey leader line. `"radial"` is the same but keeps the leaf
 #'   labels inside the circle (the original Krona style). `"tangential"` runs
 #'   every label along its arc, centred in the band, shown only when the name
-#'   fits. In all modes text is normalised to never appear upside-down, merged
-#'   fill chains are labelled once, and wedges with no room get a small dot.
+#'   fits. `"mixed"` draws **internal** labels tangentially (circular) and
+#'   **leaf** labels radially, anchored at the band inner edge like
+#'   `"radial"`'s leaf style (never outside the rim). `"adaptive"` tries the
+#'   tangential placement first for every label (internal and leaf) and falls
+#'   back to the radial placement only when the name does not fit the arc.
+#'   In all modes text is normalised to never appear upside-down, merged fill
+#'   chains are labelled once, and a label with nowhere to go gets the
+#'   `label_fallback` marker instead. See `dismiss_overlaps` for thinning
+#'   crowded radial labels and `label_fallback` for what replaces a label that
+#'   cannot be shown.
+#' @param dismiss_overlaps (logical, default `TRUE`) Static sunburst only.
+#'   Radially-oriented labels (leaf callouts in `"auto"`, every radial label in
+#'   `"radial"`/`"mixed"`, and the radial fallback in `"adaptive"`) are
+#'   anchored at a single point and can visually crowd a neighbour when their
+#'   wedges are angularly close, even though each individually "fits" its own
+#'   wedge. When `TRUE`, such collisions are detected and the lower-value
+#'   label of the pair is replaced by the `label_fallback` marker instead of
+#'   being drawn overlapping. Has no effect on purely tangential labels, which
+#'   are already confined to their own arc. Set to `FALSE` to restore the
+#'   unfiltered placement.
+#' @param label_fallback (character, default `"dot"`) Static sunburst only.
+#'   What to draw instead of a label that has no room, or that
+#'   `dismiss_overlaps` removed for overlapping a neighbour. `"dot"` draws the
+#'   single glyph in `fallback_symbol`. `"initials"` draws the first
+#'   `fallback_nchar` characters of the section name. `"none"` draws nothing.
+#'   Leaf labels dismissed while using the `"auto"` external-callout style keep
+#'   a short leader line stub pointing to their marker.
+#' @param fallback_symbol (character, default `"·"` i.e. a middle dot)
+#'   Static sunburst only. The glyph drawn when `label_fallback = "dot"`; pass
+#'   e.g. `"*"` or `"+"` for a different marker.
+#' @param fallback_nchar (integer, default `3`) Static sunburst only. Number
+#'   of leading characters of the section name shown when
+#'   `label_fallback = "initials"`.
 #' @param show_search (logical, default `FALSE`) Interactive widget only.
 #'   Deprecated: the search box is now always shown in the widget toolbar (for
 #'   both layouts); this argument is retained for backward compatibility and
@@ -1519,6 +1730,15 @@ utils::globalVariables(c(
 #'
 #' # Collapse single-child intermediate levels
 #' krona_like_pq(data_fungi_mini, interactive = FALSE, collapse_single = TRUE)
+#'
+#' # Internal labels circular, leaf labels radial (never outside the rim)
+#' krona_like_pq(data_fungi_mini, interactive = FALSE, label_orientation = "mixed")
+#'
+#' # Circular where it fits, radial otherwise, for every label
+#' krona_like_pq(data_fungi_mini, interactive = FALSE, label_orientation = "adaptive")
+#'
+#' # Show the first 3 letters instead of a dot for labels with no room
+#' krona_like_pq(data_fungi_mini, interactive = FALSE, label_fallback = "initials")
 #'
 #' # Add a faint dotted motif on alternate sections (needs ggpattern)
 #' if (requireNamespace("ggpattern", quietly = TRUE)) {
@@ -1585,7 +1805,11 @@ krona_like_pq <- function(
   collapse_single = FALSE,
   show_collapsed_path = FALSE,
   grey_terms = c(NA_character_, "unassigned", "unknown"),
-  label_orientation = c("auto", "tangential", "radial"),
+  label_orientation = c("auto", "tangential", "radial", "mixed", "adaptive"),
+  dismiss_overlaps = TRUE,
+  label_fallback = c("dot", "initials", "none"),
+  fallback_symbol = "·",
+  fallback_nchar = 3,
   show_search = FALSE,
   show_info_panel = FALSE,
   check_nestedness = TRUE,
@@ -1597,6 +1821,26 @@ krona_like_pq <- function(
   layout <- match.arg(layout)
   label_pct <- match.arg(label_pct)
   label_orientation <- match.arg(label_orientation)
+  label_fallback <- match.arg(label_fallback)
+  if (
+    !is.character(fallback_symbol) ||
+      length(fallback_symbol) != 1 ||
+      nchar(fallback_symbol) == 0
+  ) {
+    cli::cli_abort(
+      "{.arg fallback_symbol} must be a single, non-empty character string."
+    )
+  }
+  if (
+    !is.numeric(fallback_nchar) ||
+      length(fallback_nchar) != 1 ||
+      fallback_nchar < 1
+  ) {
+    cli::cli_abort(
+      "{.arg fallback_nchar} must be a single number >= 1."
+    )
+  }
+  fallback_nchar <- as.integer(fallback_nchar)
 
   if (pattern && interactive) {
     cli::cli_warn(
@@ -1794,6 +2038,10 @@ krona_like_pq <- function(
     show_center_count = show_center_count,
     label_pct = label_pct,
     label_orientation = label_orientation,
+    dismiss_overlaps = dismiss_overlaps,
+    label_fallback = label_fallback,
+    fallback_symbol = fallback_symbol,
+    fallback_nchar = fallback_nchar,
     use_gradient = use_gradient,
     val_range = if (use_gradient) val_range else NULL,
     gradient_name = if (use_gradient) color_by else NULL,

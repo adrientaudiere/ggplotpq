@@ -327,7 +327,7 @@ comet_pq <- function(
     if (length(single_point_ids) > 0) {
       cli::cli_warn(c(
         "{length(single_point_ids)} {.arg id} value{?s} dropped: fewer than 2 distinct {.arg modality} levels.",
-        "i" = "Each comet must span ≥2 modality levels. If your natural id only appears at one level (e.g. individuals each sampled at a single time point), the {.arg id} and {.arg modality} roles may need to be swapped or the data aggregated.",
+        "i" = "Each comet must span \u22652 modality levels. If your natural id only appears at one level (e.g. individuals each sampled at a single time point), the {.arg id} and {.arg modality} roles may need to be swapped or the data aggregated.",
         "i" = "See {.code ?comet_pq} example 5 for an {.fn aggregate}-based restructuring.",
         "i" = "Dropped {.arg id} value{?s}: {.val {single_point_ids}}"
       ))
@@ -339,7 +339,7 @@ comet_pq <- function(
       cli::cli_abort(c(
         "Duplicate {.arg modality} levels found within one or more {.arg id} groups.",
         "i" = "Each step of a comet must have exactly one row per ({.arg id}, {.arg modality}) combination.",
-        "i" = "Aggregate duplicates first — see {.code ?comet_pq} example 5, or use:",
+        "i" = "Aggregate duplicates first \u2014 see {.code ?comet_pq} example 5, or use:",
         "i" = "{.code dplyr::summarise(dplyr::across(c({.val {x}}, {.val {y}}), mean), .by = c({.val {id}}, {.val {modality}}))}"
       ))
     }

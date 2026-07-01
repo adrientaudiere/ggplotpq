@@ -52,10 +52,10 @@
 #'   `em` units) for the diff value text.
 #' @param .arrow_size (numeric, default: 1.0) Font-size multiplier (in
 #'   `em` units) for the directional arrow in the diff columns.
-#' @param big_mark (character, default: "\U2009") Character used to group
-#'   digits every 3 places in numeric columns and diff values (e.g.
-#'   `19000` becomes `19\U2009000`). Set to `NULL` or `""` to disable
-#'   grouping.
+#' @param big_mark (character, default: a thin space, U+2009) Character used to
+#'   group digits every 3 places in numeric columns and diff values (e.g.
+#'   `19000` becomes `19 000` using a thin space). Set to `NULL` or `""` to
+#'   disable grouping.
 #' @param round (integer, default: 2) Number of decimal places to round
 #'   numeric columns for display. Set to `NULL` or `NA` to disable rounding.
 #' @param ... Additional arguments passed to [formattable::formattable()].
@@ -66,21 +66,28 @@
 #' @export
 #'
 #' @examples
-#' data(data_fungi_mini, package = "MiscMetabar")
-#' d_filt <- prune_taxa(taxa_sums(data_fungi_mini) > 10000, data_fungi_mini) |>
-#'  clean_pq()
-#' track <- track_wkflow( list("full"=data_fungi, "mini" = data_fungi_mini, "filt" = d_filt))
-#' parent <- c(full=NA, mini = "full", filt = "mini")
-#' track_wkflow_formattable(track, parent)
+#' \donttest{
+#' if (requireNamespace("pbapply", quietly = TRUE) &&
+#'   requireNamespace("formattable", quietly = TRUE)) {
+#'   data(data_fungi_mini, package = "MiscMetabar")
+#'   d_filt <- prune_taxa(taxa_sums(data_fungi_mini) > 10000, data_fungi_mini) |>
+#'     clean_pq()
+#'   track <- track_wkflow(
+#'     list("full" = data_fungi, "mini" = data_fungi_mini, "filt" = d_filt)
+#'   )
+#'   parent <- c(full = NA, mini = "full", filt = "mini")
+#'   track_wkflow_formattable(track, parent)
 #'
-#' # With extra metrics from track_wkflow()
-#' track_extra <- track_wkflow(
-#'   list("full"=data_fungi, "mini" = data_fungi_mini, "filt" = d_filt),
-#'   compute_occurrences = TRUE,
-#'   compute_taxo_info = TRUE,
-#'   compute_seq_length = TRUE
-#' )
-#' track_wkflow_formattable(track_extra, parent)
+#'   # With extra metrics from track_wkflow()
+#'   track_extra <- track_wkflow(
+#'     list("full" = data_fungi, "mini" = data_fungi_mini, "filt" = d_filt),
+#'     compute_occurrences = TRUE,
+#'     compute_taxo_info = TRUE,
+#'     compute_seq_length = TRUE
+#'   )
+#'   track_wkflow_formattable(track_extra, parent)
+#' }
+#' }
 track_wkflow_formattable <- function(
   track_df,
   parent = NULL,
