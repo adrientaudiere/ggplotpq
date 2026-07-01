@@ -86,7 +86,8 @@ test_that("track_wkflow_formattable works with real track_wkflow extra metrics",
   skip_on_cran()
   data(data_fungi_mini, package = "MiscMetabar")
   d_filt <- phyloseq::prune_taxa(
-    phyloseq::taxa_sums(data_fungi_mini) > 10, data_fungi_mini
+    phyloseq::taxa_sums(data_fungi_mini) > 10,
+    data_fungi_mini
   )
   track <- MiscMetabar::track_wkflow(
     list("raw" = data_fungi_mini, "filt" = d_filt),
@@ -115,7 +116,8 @@ test_that("track_wkflow_formattable accepts color override args", {
     row.names = c("raw", "filt")
   )
   expect_no_error(
-    track_wkflow_formattable(track_df,
+    track_wkflow_formattable(
+      track_df,
       na_bar_color = "darkred",
       div_bar_color = "blue",
       seq_tile_low = "yellow",

@@ -16,7 +16,10 @@ df_no_outlier <- data.frame(
   sample = c("A", "B", "C"),
   reads = c(100, 120, 110)
 )
-p_no_outlier <- ggplot2::ggplot(df_no_outlier, ggplot2::aes(x = sample, y = reads)) +
+p_no_outlier <- ggplot2::ggplot(
+  df_no_outlier,
+  ggplot2::aes(x = sample, y = reads)
+) +
   ggplot2::geom_col()
 
 # ---- .pq_find_main_cluster ---------------------------------------------------
