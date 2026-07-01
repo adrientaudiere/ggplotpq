@@ -10,7 +10,8 @@ plot_sample_depth_pq(
   color_fac = NULL,
   threshold = NULL,
   log10 = FALSE,
-  sort = FALSE
+  sort = FALSE,
+  add_violin = FALSE
 )
 }
 \arguments{
@@ -20,8 +21,9 @@ plot_sample_depth_pq(
 bar per sample) or \code{"density"} (a smoothed density estimate).}
 
 \item{color_fac}{(character, default NULL) Optional name of a column
-in \code{\link[phyloseq:sample_data]{phyloseq::sample_data()}} to color the bars by. Ignored when
-\code{geom = "density"}.}
+in \code{\link[phyloseq:sample_data]{phyloseq::sample_data()}} to fill the bars/violin/density by.
+Non-categorical columns are coerced to factor. When \code{geom = "density"},
+one overlapping density curve is drawn per level of \code{color_fac}.}
 
 \item{threshold}{(numeric, default NULL) Optional horizontal
 reference line drawn at this depth value. Common use: the
@@ -33,9 +35,17 @@ density's x-axis) is log10-transformed.}
 \item{sort}{(logical, default FALSE) If TRUE, samples are sorted
 from highest to lowest depth. Useful for bar plots to spot
 outliers at a glance.}
+
+\item{add_violin}{(logical, default FALSE) If TRUE, a marginal violin
+plot of depth by \code{color_fac} (with jittered points, \code{alpha = 0.5})
+is placed to the right of the bar plot. Both panels share the
+y-axis (depth). Requires \code{color_fac} to be non-NULL and
+\code{geom = "bar"}; otherwise a warning is issued and the parameter is
+ignored.}
 }
 \value{
-A \link[ggplot2:ggplot]{ggplot2::ggplot} object.
+A \link[ggplot2:ggplot]{ggplot2::ggplot} object, or a \link[patchwork:patchwork]{patchwork::patchwork}
+object when \code{add_violin = TRUE}.
 }
 \description{
 \if{html}{\out{
@@ -49,6 +59,14 @@ Draw a bar or density plot of per-sample sequencing depth
 QA plot to identify low-depth samples before downstream analyses.
 A reference line at \code{threshold} (when supplied) is drawn to make the
 cutoff visible.
+
+When \code{add_violin = TRUE} and \code{color_fac} is supplied, a marginal
+violin plot is placed to the right of the bar plot. Both panels share
+the y-axis (sequencing depth): panel A shows the vertical per-sample
+bars, panel B shows a vertical violin of depth by \code{color_fac} with
+jittered points (\code{alpha = 0.5}) for individual samples. This makes it
+easy to judge, at a glance, whether sequencing depth differs between
+groups of samples.
 }
 \examples{
 \donttest{
@@ -56,6 +74,10 @@ data(data_fungi_mini, package = "MiscMetabar")
 plot_sample_depth_pq(data_fungi_mini)
 plot_sample_depth_pq(data_fungi_mini, geom = "density", log10 = TRUE)
 plot_sample_depth_pq(data_fungi_mini, color_fac = "Height", sort = TRUE)
+plot_sample_depth_pq(data_fungi_mini, color_fac = "Height",
+  add_violin = TRUE, log10 = TRUE, threshold = 8000)
+plot_sample_depth_pq(data_fungi_mini, color_fac = "Time",
+  geom = "density", log10 = TRUE)
 }
 }
 \author{

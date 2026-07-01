@@ -53,6 +53,10 @@ boundary. Set to \code{0} to disable.}
 \item{label_angle}{(numeric, default \code{0}) Angle in degrees for outlier value
 labels. Use e.g. \code{90} when many outliers are close together and labels
 overlap horizontally.}
+
+\item{bar_gradient}{(logical, default \code{TRUE}) If \code{TRUE}, draw the outlier
+arrows with a colour gradient along their length; if \code{FALSE}, use a solid
+\code{arrow_color}.}
 }
 \value{
 A modified \link[ggplot2:ggplot]{ggplot2::ggplot} object with \code{\link[ggplot2:coord_cartesian]{ggplot2::coord_cartesian()}}
