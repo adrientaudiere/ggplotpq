@@ -203,6 +203,7 @@ if (all(vapply(pkgs, requireNamespace, logical(1), quietly = TRUE))) {
   # Default: 4 metrics, pie charts at Class rank, Height has 3 modalities
   community_sharing_plot(data_fungi_mini, fact = "Height")
 }
+#> Warning: Removed 4 rows containing non-finite outside the scale range (`stat_pie()`).
 
 # }
 if (FALSE) { # \dontrun{

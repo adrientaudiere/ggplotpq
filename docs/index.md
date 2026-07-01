@@ -20,11 +20,7 @@ render their plots, but the analysis wrapper itself does not live here.
 
 ## Installation
 
-``` r
-
-# install.packages("devtools")
-devtools::install_github("adrientaudiere/ggplotpq")
-```
+`r{eval = FALSE} # install.packages("devtools") devtools::install_github("adrientaudiere/ggplotpq")`
 
 ## Status
 

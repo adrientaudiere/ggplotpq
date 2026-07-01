@@ -1,6 +1,7 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/404.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/CLAUDE.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/CONTEXT.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/LICENSE-text.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/LICENSE.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/articles/ggplotpq.html</loc></url>
@@ -8,16 +9,27 @@
 <url><loc>https://adrientaudiere.github.io/ggplotpq/authors.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/index.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/news/index.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/break_outlier_axis.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/comet_pq.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/community_sharing_barplot.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/community_sharing_plot.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/default_sharing_metrics.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/dot-build_ascii_tree.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/dot-diff_colors.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/dot-diff_display.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/dot-diff_display_html.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/dot-format_grouped.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/dot-interp_color.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/dot-proportion_bar.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/gg_bubbles_pq.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/ggplotpq-package.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/idest_colors.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/idest_pal.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/index.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/make_sharing_metric.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/membership_from_list.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/neg_control_diag_pq.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/palette_earthtones.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/plot_sample_depth_pq.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_count_pq.html</loc></url>
@@ -33,6 +45,8 @@
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/ternary_pq.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/theme_idest.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/theme_pq_minimal.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/track_wkflow_formattable.html</loc></url>
 <url><loc>https://adrientaudiere.github.io/ggplotpq/reference/wheat_plot.html</loc></url>
+<url><loc>https://adrientaudiere.github.io/ggplotpq/reference/zoom_outlier_axis.html</loc></url>
 </urlset>
 

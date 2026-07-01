@@ -18,9 +18,12 @@ interaction).
 proportional to its value. Click a cell to zoom in.
 
 
-Colours follow the Krona convention: each distinct value at the
-color_by rank receives its own hue, and descendants inherit the parent
-hue with a progressive lightness shift (darker as you go deeper).
+Colours: each distinct value at the color_by rank receives its own
+evenly spaced hue; its descendants then fan out across a hue band centred
+on that hue (and grow slightly darker with depth), so nested sections are
+clearly distinct colours rather than near-identical shades. Set
+pattern = TRUE (static plots only) to overlay a faint grey dotted motif
+on every other section, an extra channel to tell neighbours apart.
 This function is a drop-in alternative to MiscMetabar::krona(), which
 shells out to KronaTools and does not work on Windows. krona_like_pq()
 works on all platforms because it bundles D3.js locally."><meta property="og:description" content="
@@ -42,9 +45,12 @@ interaction).
 proportional to its value. Click a cell to zoom in.
 
 
-Colours follow the Krona convention: each distinct value at the
-color_by rank receives its own hue, and descendants inherit the parent
-hue with a progressive lightness shift (darker as you go deeper).
+Colours: each distinct value at the color_by rank receives its own
+evenly spaced hue; its descendants then fan out across a hue band centred
+on that hue (and grow slightly darker with depth), so nested sections are
+clearly distinct colours rather than near-identical shades. Set
+pattern = TRUE (static plots only) to overlay a faint grey dotted motif
+on every other section, an extra channel to tell neighbours apart.
 This function is a drop-in alternative to MiscMetabar::krona(), which
 shells out to KronaTools and does not work on Windows. krona_like_pq()
 works on all platforms because it bundles D3.js locally."><meta property="og:image" content="https://adrientaudiere.github.io/ggplotpq/logo.svg"></head><body>
@@ -55,7 +61,7 @@ works on all platforms because it bundles D3.js locally."><meta property="og:ima
 
     <a class="navbar-brand me-2" href="../index.html">ggplotpq</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -96,9 +102,12 @@ pie. Click a wedge to zoom into that subtree (Krona's signature
 interaction).</p></li>
 <li><p><code>"treemap"</code>: nested rectangles; the <strong>area</strong> of each rectangle is
 proportional to its value. Click a cell to zoom in.</p></li>
-</ul><p>Colours follow the Krona convention: each distinct value at the
-<code>color_by</code> rank receives its own hue, and descendants inherit the parent
-hue with a progressive lightness shift (darker as you go deeper).</p>
+</ul><p>Colours: each distinct value at the <code>color_by</code> rank receives its own
+evenly spaced hue; its descendants then fan out across a hue band centred
+on that hue (and grow slightly darker with depth), so nested sections are
+clearly distinct colours rather than near-identical shades. Set
+<code>pattern = TRUE</code> (static plots only) to overlay a faint grey dotted motif
+on every other section, an extra channel to tell neighbours apart.</p>
 <p>This function is a drop-in alternative to <code><a href="https://adrientaudiere.github.io/MiscMetabar/reference/krona.html" class="external-link">MiscMetabar::krona()</a></code>, which
 shells out to KronaTools and does not work on Windows. <code>krona_like_pq()</code>
 works on all platforms because it bundles D3.js locally.</p>
@@ -111,10 +120,23 @@ works on all platforms because it bundles D3.js locally.</p>
 <span>  ranks <span class="op">=</span> <span class="st">"All"</span>,</span>
 <span>  weight_by <span class="op">=</span> <span class="st">"sequences"</span>,</span>
 <span>  add_unassigned_rank <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  fill_unassigned <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  layout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sunburst"</span>, <span class="st">"treemap"</span><span class="op">)</span>,</span>
 <span>  interactive <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  title <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  color_by <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  color_as_numeric <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  pattern <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  label_pct <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"none"</span>, <span class="st">"total"</span>, <span class="st">"parent"</span><span class="op">)</span>,</span>
+<span>  show_center_count <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  min_prop <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  collapse_single <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  show_collapsed_path <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  grey_terms <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">NA_character_</span>, <span class="st">"unassigned"</span>, <span class="st">"unknown"</span><span class="op">)</span>,</span>
+<span>  label_orientation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"tangential"</span>, <span class="st">"radial"</span><span class="op">)</span>,</span>
+<span>  show_search <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  show_info_panel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  check_nestedness <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  file_path <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  width <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  height <span class="op">=</span> <span class="cn">NULL</span></span>
@@ -131,9 +153,13 @@ works on all platforms because it bundles D3.js locally.</p>
 
 <dt id="arg-ranks">ranks<a class="anchor" aria-label="anchor" href="#arg-ranks"></a></dt>
 <dd><p>(character or integer, default <code>"All"</code>) Taxonomic ranks to
-use. <code>"All"</code> selects every column of <code>tax_table(physeq)</code>; an integer
-vector selects columns by position; a character vector selects columns
-by name (must all be present in <code><a href="https://rdrr.io/pkg/phyloseq/man/rank_names.html" class="external-link">phyloseq::rank_names()</a></code>).</p></dd>
+include. <code>"All"</code> (default) first tries to select only the seven standard
+ranks Kingdom, Phylum, Class, Order, Family, Genus, Species (in that order)
+if at least two of them are present — this avoids cluttering the chart with
+non-hierarchical annotation columns. Falls back to every column of
+<code>tax_table()</code> only when fewer than two classical ranks are found. An
+integer vector selects columns by position; a character vector selects
+columns by name (must all be present in <code><a href="https://rdrr.io/pkg/phyloseq/man/rank_names.html" class="external-link">phyloseq::rank_names()</a></code>).</p></dd>
 
 
 <dt id="arg-weight-by">weight_by<a class="anchor" aria-label="anchor" href="#arg-weight-by"></a></dt>
@@ -158,6 +184,18 @@ selected <code>ranks</code>); beyond that depth, taxa with <code>NA</code> at a 
 dropped.</p></dd>
 
 
+<dt id="arg-fill-unassigned">fill_unassigned<a class="anchor" aria-label="anchor" href="#arg-fill-unassigned"></a></dt>
+<dd><p>(logical, default <code>TRUE</code>) When <code>TRUE</code>, a section that
+terminates before the deepest rank – an <code>"unassigned"</code> taxon, or a
+<code>min_prop</code> <code>"n more"</code> aggregate – is extended with a chain of identical
+nested nodes down to the deepest selected rank, so its arc reaches the
+outer ring (e.g. a taxon unidentified from Class onwards still spans Class,
+Order, ..., Species; the whole circle is filled). The repeated segments
+render as a single borderless wedge carrying one label at the leaf. When
+<code>FALSE</code>, the section stops at the rank where it ended, leaving an inner
+wedge with no outer rings.</p></dd>
+
+
 <dt id="arg-layout">layout<a class="anchor" aria-label="anchor" href="#arg-layout"></a></dt>
 <dd><p>(character, default <code>"sunburst"</code>) One of <code>"sunburst"</code> (angle
 = value, Krona pie) or <code>"treemap"</code> (area = value).</p></dd>
@@ -175,10 +213,117 @@ to <code>"Taxonomy"</code>.</p></dd>
 
 
 <dt id="arg-color-by">color_by<a class="anchor" aria-label="anchor" href="#arg-color-by"></a></dt>
-<dd><p>(character, default <code>NULL</code>) Name of the rank whose
-distinct values receive distinct hues. Descendants inherit the parent
-hue with a lightness shift. When <code>NULL</code>, defaults to the first selected
-rank (the outermost ring) — the classic Krona look.</p></dd>
+<dd><p>(character, default <code>NULL</code>) Name of the rank (must be in
+<code>ranks</code> for categorical coloring, or any <code>tax_table()</code> column when
+<code>color_as_numeric = TRUE</code>) whose values drive the colour assignment.
+When <code>NULL</code>, defaults to the first selected rank. Tip: when the first
+rank has only one value (e.g. a single phylum), set <code>color_by</code> to a more
+diverse rank to spread colour earlier.</p></dd>
+
+
+<dt id="arg-color-as-numeric">color_as_numeric<a class="anchor" aria-label="anchor" href="#arg-color-as-numeric"></a></dt>
+<dd><p>(logical, default <code>FALSE</code>) When <code>TRUE</code>, <code>color_by</code>
+may be any column of <code>tax_table()</code> (not just a rank in <code>ranks</code>). Its
+values are coerced to numeric and mapped to a continuous sequential
+gradient (viridis palette via <strong>scales</strong>). Numeric values are aggregated
+up the tree by weighted mean using <code>weight_by</code>, so internal sections
+receive a meaningful colour. Requires the <strong>scales</strong> package.</p></dd>
+
+
+<dt id="arg-pattern">pattern<a class="anchor" aria-label="anchor" href="#arg-pattern"></a></dt>
+<dd><p>(logical, default <code>FALSE</code>) Static plots only. When <code>TRUE</code>,
+overlays a faint grey dotted motif on every other section (alternating
+within each ring/level) so neighbouring sections of similar colour can
+still be told apart. Requires the <strong>ggpattern</strong> package. Ignored when
+<code>interactive = TRUE</code>.</p></dd>
+
+
+<dt id="arg-label-pct">label_pct<a class="anchor" aria-label="anchor" href="#arg-label-pct"></a></dt>
+<dd><p>(character, default <code>"none"</code>) Whether to append a
+proportion to each section label. One of <code>"none"</code> (no percentage),
+<code>"total"</code> (percentage of the overall total, following <code>weight_by</code>), or
+<code>"parent"</code> (percentage of the immediate parent section). Applies to static
+plots only.</p></dd>
+
+
+<dt id="arg-show-center-count">show_center_count<a class="anchor" aria-label="anchor" href="#arg-show-center-count"></a></dt>
+<dd><p>(logical, default <code>TRUE</code>) Static sunburst only.
+When <code>TRUE</code>, the total count (following <code>weight_by</code>) is shown in the
+centre hole as <code>n = &lt;x&gt;</code>, mirroring the original Krona display. Set to
+<code>FALSE</code> to suppress. For the interactive widget the centre count updates
+to the focused node when zooming; controlled by <code>show_center_count</code> as
+well.</p></dd>
+
+
+<dt id="arg-min-prop">min_prop<a class="anchor" aria-label="anchor" href="#arg-min-prop"></a></dt>
+<dd><p>(numeric, default <code>NULL</code>) When a positive number, siblings
+within the same parent whose proportion of that parent falls below this
+threshold are merged into a single <code>"&lt;n&gt; more"</code> aggregate section
+(crosshatch motif via <strong>ggpattern</strong>; plain grey if <strong>ggpattern</strong> is not
+available). <code>NULL</code> (default) disables merging. A typical value is <code>0.02</code>
+(2%). Aggregation recurs at every depth. When <code>fill_unassigned = TRUE</code>
+(the default) the aggregate also spans out to the leaf ring as one
+borderless wedge, so the whole circle stays filled.</p></dd>
+
+
+<dt id="arg-collapse-single">collapse_single<a class="anchor" aria-label="anchor" href="#arg-collapse-single"></a></dt>
+<dd><p>(logical, default <code>FALSE</code>) When <code>TRUE</code>, internal
+nodes that have exactly one child (and that child is not a leaf) are
+removed from the hierarchy; the grandchildren attach directly to the
+grandparent. This trims redundant intermediate ranks (e.g. a Family
+containing a single Genus) from both static and interactive views.
+Leaf nodes are never collapsed.</p></dd>
+
+
+<dt id="arg-show-collapsed-path">show_collapsed_path<a class="anchor" aria-label="anchor" href="#arg-show-collapsed-path"></a></dt>
+<dd><p>(logical, default <code>FALSE</code>) Static plots only, and
+only meaningful together with <code>collapse_single = TRUE</code>. When <code>TRUE</code>, each
+collapsed section is labelled with its full taxonomic path – the names of
+the skipped intermediate ranks joined by <code>" / "</code> and prefixed to the node
+name (e.g. <code>"Stereaceae / Stereum"</code>) – drawn in grey so the merged ranks
+remain visible.</p></dd>
+
+
+<dt id="arg-grey-terms">grey_terms<a class="anchor" aria-label="anchor" href="#arg-grey-terms"></a></dt>
+<dd><p>(character, default <code>c(NA, "unassigned", "unknown")</code>)
+Section names whose colour is overridden to grey, used to visually mute
+uninformative taxa. <code>NA</code> matches sections with a missing name. Pass
+<code>character(0)</code> to disable.</p></dd>
+
+
+<dt id="arg-label-orientation">label_orientation<a class="anchor" aria-label="anchor" href="#arg-label-orientation"></a></dt>
+<dd><p>(character, default <code>"auto"</code>) Static sunburst
+only. Controls how section labels are placed. <code>"auto"</code> (default):
+<strong>internal</strong> labels are <strong>radial</strong> (running along the radius), centred on
+their wedge and reading outward from the band inner edge, shortened to the
+radial room so they stay within ~their ring; <strong>leaf</strong> labels are placed
+<strong>outside the rim</strong>, radial and reading outward, each linked to its wedge
+by a short grey leader line. <code>"radial"</code> is the same but keeps the leaf
+labels inside the circle (the original Krona style). <code>"tangential"</code> runs
+every label along its arc, centred in the band, shown only when the name
+fits. In all modes text is normalised to never appear upside-down, merged
+fill chains are labelled once, and wedges with no room get a small dot.</p></dd>
+
+
+<dt id="arg-show-search">show_search<a class="anchor" aria-label="anchor" href="#arg-show-search"></a></dt>
+<dd><p>(logical, default <code>FALSE</code>) Interactive widget only.
+Deprecated: the search box is now always shown in the widget toolbar (for
+both layouts); this argument is retained for backward compatibility and
+has no effect.</p></dd>
+
+
+<dt id="arg-show-info-panel">show_info_panel<a class="anchor" aria-label="anchor" href="#arg-show-info-panel"></a></dt>
+<dd><p>(logical, default <code>FALSE</code>) Interactive widget only.
+When <code>TRUE</code>, a top-left info panel shows the hovered node's name, count,
+and percentages of parent and total, plus a list of sibling nodes.</p></dd>
+
+
+<dt id="arg-check-nestedness">check_nestedness<a class="anchor" aria-label="anchor" href="#arg-check-nestedness"></a></dt>
+<dd><p>(logical, default <code>TRUE</code>) When <code>TRUE</code>, the function
+checks that <code>tax_table()</code> is strictly nested (each value at rank <code>i+1</code>
+appears under only one parent at rank <code>i</code>) and issues a <code><a href="https://cli.r-lib.org/reference/cli_abort.html" class="external-link">cli::cli_warn()</a></code>
+for any offending rank pair. Set to <code>FALSE</code> to suppress this check, e.g.
+when annotation columns are intentionally non-hierarchical.</p></dd>
 
 
 <dt id="arg-file-path">file_path<a class="anchor" aria-label="anchor" href="#arg-file-path"></a></dt>
@@ -188,8 +333,8 @@ via <code><a href="https://rdrr.io/pkg/htmlwidgets/man/saveWidget.html" class="e
 Ignored when <code>interactive = FALSE</code>.</p></dd>
 
 
-<dt id="arg-width-">width, <a class="anchor" aria-label="anchor" href="#arg-width-"></a></dt>
-<dd><p>height (numeric, default <code>NULL</code>) Widget dimensions in pixels.
+<dt id="arg-width-height">width, height<a class="anchor" aria-label="anchor" href="#arg-width-height"></a></dt>
+<dd><p>(numeric, default <code>NULL</code>) Widget dimensions in pixels.
 When <code>NULL</code>, the widget fills its container (RStudio viewer / Shiny).
 Ignored when <code>interactive = FALSE</code>.</p></dd>
 
@@ -215,36 +360,75 @@ original Krona project.</p></div>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">data_fungi_mini</span>, package <span class="op">=</span> <span class="st">"MiscMetabar"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">pq5</span> <span class="op">&lt;-</span> <span class="fu">phyloseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/phyloseq/man/prune_samples-methods.html" class="external-link">prune_samples</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu">phyloseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/phyloseq/man/sample_names-methods.html" class="external-link">sample_names</a></span><span class="op">(</span><span class="va">data_fungi_mini</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>,</span></span>
+<span class="r-in"><span>  <span class="va">data_fungi_mini</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Static sunburst (no extra dependency needed)</span></span></span>
-<span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">pq5</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>33 taxa with zero weight were dropped before plotting.</span>
 <span class="r-plt img"><img src="krona_like_pq-1.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="co"># }</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">data_fungi_mini</span>, package <span class="op">=</span> <span class="st">"MiscMetabar"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Static treemap</span></span></span>
 <span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, layout <span class="op">=</span> <span class="st">"treemap"</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="krona_like_pq-2.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Show proportion of total on labels</span></span></span>
+<span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span>, label_pct <span class="op">=</span> <span class="st">"total"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Show proportion of parent on labels</span></span></span>
+<span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span>, label_pct <span class="op">=</span> <span class="st">"parent"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Merge low-abundance sections (&lt; 2 percent of parent) into "n more"</span></span></span>
+<span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span>, min_prop <span class="op">=</span> <span class="fl">0.02</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Collapse single-child intermediate levels</span></span></span>
+<span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span>, collapse_single <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Add a faint dotted motif on alternate sections (needs ggpattern)</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"ggpattern"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span>, pattern <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Colour by a numeric tax_table attribute (e.g. a confidence score column)</span></span></span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"scales"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">pq_num</span> <span class="op">&lt;-</span> <span class="va">data_fungi_mini</span></span></span>
+<span class="r-in"><span>  <span class="fu">phyloseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/phyloseq/man/tax_table-methods.html" class="external-link">tax_table</a></span><span class="op">(</span><span class="va">pq_num</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="fu">phyloseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/phyloseq/man/tax_table-methods.html" class="external-link">tax_table</a></span><span class="op">(</span><span class="va">pq_num</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    conf_score <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fu">phyloseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/phyloseq/man/ntaxa-methods.html" class="external-link">ntaxa</a></span><span class="op">(</span><span class="va">pq_num</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu">krona_like_pq</span><span class="op">(</span></span></span>
+<span class="r-in"><span>    <span class="va">pq_num</span>,</span></span>
+<span class="r-in"><span>    interactive <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>    color_by <span class="op">=</span> <span class="st">"conf_score"</span>,</span></span>
+<span class="r-in"><span>    color_as_numeric <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Weight by ASV count instead of read count</span></span></span>
 <span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, weight_by <span class="op">=</span> <span class="st">"asv"</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="krona_like_pq-3.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Weight by a transformation of read counts</span></span></span>
-<span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, weight_by <span class="op">=</span> <span class="va">log1p</span>, interactive <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="krona_like_pq-4.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Subset of ranks and a custom title</span></span></span>
 <span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">data_fungi_mini</span>,</span></span>
 <span class="r-in"><span>  ranks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Phylum"</span>, <span class="st">"Class"</span>, <span class="st">"Order"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  title <span class="op">=</span> <span class="st">"Fungi — top 3 ranks"</span>,</span></span>
+<span class="r-in"><span>  title <span class="op">=</span> <span class="st">"Fungi -- top 3 ranks"</span>,</span></span>
 <span class="r-in"><span>  interactive <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="krona_like_pq-5.png" alt="" width="700" height="433"></span>
-<span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span> <span class="co"># \dontrun{</span></span></span>
 <span class="r-in"><span><span class="co"># Interactive D3 widget (requires the htmlwidgets package)</span></span></span>
 <span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Interactive widget with search box and info panel</span></span></span>
+<span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">data_fungi_mini</span>,</span></span>
+<span class="r-in"><span>  show_search <span class="op">=</span> <span class="cn">TRUE</span>,</span></span>
+<span class="r-in"><span>  show_info_panel <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Save a self-contained HTML file to share</span></span></span>
 <span class="r-in"><span><span class="fu">krona_like_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, file_path <span class="op">=</span> <span class="st">"krona_fungi.html"</span><span class="op">)</span></span></span>

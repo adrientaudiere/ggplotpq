@@ -11,13 +11,13 @@ Source:
 [`DESCRIPTION`](https://github.com/adrientaudiere/ggplotpq/blob/HEAD/DESCRIPTION)
 
 Taudière A (2026). *ggplotpq: 'ggplot2' Visualisation Helpers for
-'phyloseq' Objects*. R package version 0.0.0.9000,
+'phyloseq' Objects*. R package version 0.1.0.9000,
 <https://adrientaudiere.github.io/ggplotpq/>.
 
     @Manual{,
       title = {ggplotpq: 'ggplot2' Visualisation Helpers for 'phyloseq' Objects},
       author = {Adrien Taudière},
       year = {2026},
-      note = {R package version 0.0.0.9000},
+      note = {R package version 0.1.0.9000},
       url = {https://adrientaudiere.github.io/ggplotpq/},
     }

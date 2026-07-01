@@ -15,7 +15,10 @@ from ‘MiscMetabar’ and ‘comparpq’.
 - ✅ In scope: pure ggplot2 helpers (geoms, themes, scales, palettes),
   single-phyloseq ggplot wrappers (e.g. `wheat_plot`,
   `reorder_distinct_colors`), rendering of analyses done elsewhere
-  (ternary plot for `lefser` output, `plotGamma` rendering for ALDEx2).
+  (ternary plot for `lefser` output, `plotGamma` rendering for ALDEx2),
+  and HTML-widget visualisations of workflow/phyloseq metadata
+  (e.g. `track_wkflow_formattable`) — these widgets stand here because
+  they are pure rendering of pqverse objects, not analysis methods.
 - ❌ Out of scope: multi-phyloseq comparators (→ `comparpq`), ML /
   networks / DAGs (→ `netaipq`), data-structure utilities (→ `tidypq`),
   analysis methods (→ `netaipq`).
@@ -86,3 +89,21 @@ workflow.
   <https://github.com/adrientaudiere/pqverse/ROADMAP.md#ggplotpq>
 - Sister packages: `pqverse_pkg/MiscMetabar/`, `pqverse_pkg/comparpq/`,
   `pqverse_pkg/netaipq/`, `pqverse_pkg/tidypq/`
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked as GitHub issues via the `gh` CLI; external
+PRs are not a triage surface. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the five canonical triage labels (`needs-triage`, `needs-info`,
+`ready-for-agent`, `ready-for-human`, `wontfix`). See
+`docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See
+`docs/agents/domain.md`.

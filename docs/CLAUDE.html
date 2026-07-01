@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="index.html">ggplotpq</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +37,7 @@
 <h2 id="package-overview">Package Overview<a class="anchor" aria-label="anchor" href="#package-overview"></a></h2>
 <p><strong>ggplotpq</strong> is the ‘ggplot2’ visualisation layer of the pqverse. It owns pure-ggplot2 helpers and single-phyloseq ggplot wrappers migrated from ‘MiscMetabar’ and ‘comparpq’.</p>
 <p><strong>Scope guard</strong> (from <code>ROADMAP.md</code>):</p>
-<ul><li>✅ In scope: pure ggplot2 helpers (geoms, themes, scales, palettes), single-phyloseq ggplot wrappers (e.g. <code>wheat_plot</code>, <code>reorder_distinct_colors</code>), rendering of analyses done elsewhere (ternary plot for <code>lefser</code> output, <code>plotGamma</code> rendering for ALDEx2).</li>
+<ul><li>✅ In scope: pure ggplot2 helpers (geoms, themes, scales, palettes), single-phyloseq ggplot wrappers (e.g. <code>wheat_plot</code>, <code>reorder_distinct_colors</code>), rendering of analyses done elsewhere (ternary plot for <code>lefser</code> output, <code>plotGamma</code> rendering for ALDEx2), and HTML-widget visualisations of workflow/phyloseq metadata (e.g. <code>track_wkflow_formattable</code>) — these widgets stand here because they are pure rendering of pqverse objects, not analysis methods.</li>
 <li>❌ Out of scope: multi-phyloseq comparators (→ <code>comparpq</code>), ML / networks / DAGs (→ <code>netaipq</code>), data-structure utilities (→ <code>tidypq</code>), analysis methods (→ <code>netaipq</code>).</li>
 </ul><p><strong>Dependency rule.</strong> New heavy deps for analysis live in <code>netaipq</code>. New pure-ggplot2 deps (themes, scales, palettes) live here.</p>
 </div>
@@ -91,6 +91,21 @@
 <li>Sister packages: <code>pqverse_pkg/MiscMetabar/</code>, <code>pqverse_pkg/comparpq/</code>, <code>pqverse_pkg/netaipq/</code>, <code>pqverse_pkg/tidypq/</code>
 </li>
 </ul></div>
+<div class="section level2">
+<h2 id="agent-skills">Agent skills<a class="anchor" aria-label="anchor" href="#agent-skills"></a></h2>
+<div class="section level3">
+<h3 id="issue-tracker">Issue tracker<a class="anchor" aria-label="anchor" href="#issue-tracker"></a></h3>
+<p>Issues and PRDs are tracked as GitHub issues via the <code>gh</code> CLI; external PRs are not a triage surface. See <code>docs/agents/issue-tracker.md</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="triage-labels">Triage labels<a class="anchor" aria-label="anchor" href="#triage-labels"></a></h3>
+<p>Uses the five canonical triage labels (<code>needs-triage</code>, <code>needs-info</code>, <code>ready-for-agent</code>, <code>ready-for-human</code>, <code>wontfix</code>). See <code>docs/agents/triage-labels.md</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="domain-docs">Domain docs<a class="anchor" aria-label="anchor" href="#domain-docs"></a></h3>
+<p>Single-context: one <code>CONTEXT.md</code> + <code>docs/adr/</code> at the repo root. See <code>docs/agents/domain.md</code>.</p>
+</div>
+</div>
 </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

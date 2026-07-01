@@ -6,14 +6,28 @@ Draw a bar or density plot of per-sample sequencing depth
 (phyloseq::sample_sums()) for a phyloseq object. Useful as a quick
 QA plot to identify low-depth samples before downstream analyses.
 A reference line at threshold (when supplied) is drawn to make the
-cutoff visible."><meta property="og:description" content="
+cutoff visible.
+When add_violin = TRUE and color_fac is supplied, a marginal
+violin plot is placed to the right of the bar plot. Both panels share
+the y-axis (sequencing depth): panel A shows the vertical per-sample
+bars, panel B shows a vertical violin of depth by color_fac with
+jittered points (alpha = 0.5) for individual samples. This makes it
+easy to judge, at a glance, whether sequencing depth differs between
+groups of samples."><meta property="og:description" content="
 
 
 Draw a bar or density plot of per-sample sequencing depth
 (phyloseq::sample_sums()) for a phyloseq object. Useful as a quick
 QA plot to identify low-depth samples before downstream analyses.
 A reference line at threshold (when supplied) is drawn to make the
-cutoff visible."><meta property="og:image" content="https://adrientaudiere.github.io/ggplotpq/logo.svg"></head><body>
+cutoff visible.
+When add_violin = TRUE and color_fac is supplied, a marginal
+violin plot is placed to the right of the bar plot. Both panels share
+the y-axis (sequencing depth): panel A shows the vertical per-sample
+bars, panel B shows a vertical violin of depth by color_fac with
+jittered points (alpha = 0.5) for individual samples. This makes it
+easy to judge, at a glance, whether sequencing depth differs between
+groups of samples."><meta property="og:image" content="https://adrientaudiere.github.io/ggplotpq/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -21,7 +35,7 @@ cutoff visible."><meta property="og:image" content="https://adrientaudiere.githu
 
     <a class="navbar-brand me-2" href="../index.html">ggplotpq</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,6 +68,13 @@ cutoff visible."><meta property="og:image" content="https://adrientaudiere.githu
 QA plot to identify low-depth samples before downstream analyses.
 A reference line at <code>threshold</code> (when supplied) is drawn to make the
 cutoff visible.</p>
+<p>When <code>add_violin = TRUE</code> and <code>color_fac</code> is supplied, a marginal
+violin plot is placed to the right of the bar plot. Both panels share
+the y-axis (sequencing depth): panel A shows the vertical per-sample
+bars, panel B shows a vertical violin of depth by <code>color_fac</code> with
+jittered points (<code>alpha = 0.5</code>) for individual samples. This makes it
+easy to judge, at a glance, whether sequencing depth differs between
+groups of samples.</p>
     </div>
 
     <div class="section level2">
@@ -64,7 +85,8 @@ cutoff visible.</p>
 <span>  color_fac <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  threshold <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  log10 <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  sort <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  sort <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  add_violin <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -83,8 +105,9 @@ bar per sample) or <code>"density"</code> (a smoothed density estimate).</p></dd
 
 <dt id="arg-color-fac">color_fac<a class="anchor" aria-label="anchor" href="#arg-color-fac"></a></dt>
 <dd><p>(character, default NULL) Optional name of a column
-in <code><a href="https://rdrr.io/pkg/phyloseq/man/sample_data-methods.html" class="external-link">phyloseq::sample_data()</a></code> to color the bars by. Ignored when
-<code>geom = "density"</code>.</p></dd>
+in <code><a href="https://rdrr.io/pkg/phyloseq/man/sample_data-methods.html" class="external-link">phyloseq::sample_data()</a></code> to fill the bars/violin/density by.
+Non-categorical columns are coerced to factor. When <code>geom = "density"</code>,
+one overlapping density curve is drawn per level of <code>color_fac</code>.</p></dd>
 
 
 <dt id="arg-threshold">threshold<a class="anchor" aria-label="anchor" href="#arg-threshold"></a></dt>
@@ -103,10 +126,20 @@ density's x-axis) is log10-transformed.</p></dd>
 from highest to lowest depth. Useful for bar plots to spot
 outliers at a glance.</p></dd>
 
+
+<dt id="arg-add-violin">add_violin<a class="anchor" aria-label="anchor" href="#arg-add-violin"></a></dt>
+<dd><p>(logical, default FALSE) If TRUE, a marginal violin
+plot of depth by <code>color_fac</code> (with jittered points, <code>alpha = 0.5</code>)
+is placed to the right of the bar plot. Both panels share the
+y-axis (depth). Requires <code>color_fac</code> to be non-NULL and
+<code>geom = "bar"</code>; otherwise a warning is issued and the parameter is
+ignored.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot2::ggplot</a> object.</p>
+    <p>A <a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot2::ggplot</a> object, or a <a href="https://patchwork.data-imaginist.com/reference/patchwork-package.html" class="external-link">patchwork::patchwork</a>
+object when <code>add_violin = TRUE</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>
@@ -122,8 +155,14 @@ outliers at a glance.</p></dd>
 <span class="r-in"><span><span class="fu">plot_sample_depth_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, geom <span class="op">=</span> <span class="st">"density"</span>, log10 <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="plot_sample_depth_pq-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="fu">plot_sample_depth_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, color_fac <span class="op">=</span> <span class="st">"Height"</span>, sort <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Ignoring empty aesthetic: `fill`.</span>
 <span class="r-plt img"><img src="plot_sample_depth_pq-3.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="fu">plot_sample_depth_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, color_fac <span class="op">=</span> <span class="st">"Height"</span>,</span></span>
+<span class="r-in"><span>  add_violin <span class="op">=</span> <span class="cn">TRUE</span>, log10 <span class="op">=</span> <span class="cn">TRUE</span>, threshold <span class="op">=</span> <span class="fl">8000</span><span class="op">)</span></span></span>
+<span class="r-plt img"><img src="plot_sample_depth_pq-4.png" alt="" width="700" height="433"></span>
+<span class="r-in"><span><span class="fu">plot_sample_depth_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, color_fac <span class="op">=</span> <span class="st">"Time"</span>,</span></span>
+<span class="r-in"><span>  geom <span class="op">=</span> <span class="st">"density"</span>, log10 <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #0000BB;">"Time"</span> is not categorical (class integer); coercing to factor.</span>
+<span class="r-plt img"><img src="plot_sample_depth_pq-5.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

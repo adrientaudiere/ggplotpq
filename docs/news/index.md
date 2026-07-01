@@ -1,7 +1,163 @@
 # Changelog
 
-## ggplotpq (development version)
+## ggplotpq 0.1.0 (Development version)
 
+- [`membership_from_list()`](https://adrientaudiere.github.io/ggplotpq/reference/membership_from_list.md)
+  (internal) converts a named list of member vectors into a binary
+  membership data frame (one row per unique member, one logical column
+  per set), the wide format required by
+  [`ComplexUpset::upset()`](https://krassowski.github.io/complex-upset/reference/upset.html)
+  and similar venn/upset tools; avoids a hard dependency on
+  [`UpSetR::fromList()`](https://rdrr.io/pkg/UpSetR/man/fromList.html).
+- [`track_wkflow_formattable()`](https://adrientaudiere.github.io/ggplotpq/reference/track_wkflow_formattable.md)
+  wraps
+  [`MiscMetabar::track_wkflow()`](https://adrientaudiere.github.io/MiscMetabar/reference/track_wkflow.html)
+  output into a formattable HTML widget with proportional color bars on
+  count columns, an optional ASCII tree showing parent-child nesting
+  between phyloseq objects (via an explicit `parent` mapping), and mini
+  diff columns (`Δ_sequences`, `Δ_clusters`, `Δ_samples`,
+  `Δ_occurrences`) with colored directional arrows scaled by magnitude.
+  Extra-metrics columns from `track_wkflow(compute_* = TRUE)` are
+  rendered by type: `nb_occurrences` and `n_samples_*` get proportional
+  bars, `prop_na_*` and `genetic_diversity_*` get proportion bars (bar
+  length = value in \[0, 1\]) with configurable colors (`na_bar_color`
+  default firebrick, `div_bar_color` default mediumpurple), `seq_*`
+  columns get a distinct gradient tile (`seq_tile_low`/`seq_tile_high`
+  default white/seagreen), and remaining columns (`nb_rank`,
+  `nb_sam_metadata`) keep the steelblue tile. Columns are reordered so
+  `prop_na_*` appear after `seq_*` and `genetic_diversity_*`. Numeric
+  columns are rounded for display via the `round` argument (default 2;
+  set to `NULL` to disable).
+- [`neg_control_diag_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/neg_control_diag_pq.md)
+  builds a four-panel patchwork figure diagnosing contamination from
+  negative controls (per-sample reads/richness, NC-vs-real dumbbell,
+  NC-taxa heatmap, ordination), migrated from `tidypq`; the programmatic
+  counterpart is
+  [`tidypq::identify_contam_negcontrol_pq()`](https://adrientaudiere.github.io/tidypq/reference/identify_contam_negcontrol_pq.html).
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  static sunburst now places leaf labels OUTSIDE the rim (radial,
+  reading outward, readable in every quadrant) linked to their wedge by
+  a short grey leader line, while internal labels run tangentially and
+  are shown only when the name fits their arc, removing the previous
+  label overlap; `fill_unassigned` now also extends `min_prop`
+  `"n more"` aggregates out to the leaf ring, identical fill chains (and
+  `collapse_single` runs of them) are drawn as one borderless wedge with
+  a single label, and the interactive widget mirrors all of this
+  (borderless chains, one label per chain) plus always shows the search
+  box in its toolbar (including the treemap layout) and keeps the
+  overall circle size when zooming.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  gains `fill_unassigned` (default `TRUE`) which extends an
+  `"unassigned"` section with a chain of nested `"unassigned"` nodes
+  down to the deepest selected rank, so its arc reaches the outer ring
+  instead of leaving a hole, and `show_collapsed_path` (default `FALSE`)
+  which, together with `collapse_single`, labels each collapsed section
+  with the full taxonomic path of the skipped ranks (joined by `" / "`)
+  drawn in grey.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  static sunburst labels now default to a hybrid layout
+  (`label_orientation = "auto"`): internal labels are radial and centred
+  on their ring band (drawn slightly smaller), while leaf labels are
+  tangential and anchored at the centre of their arc;
+  `label_orientation = "radial"` keeps every label radial and reading
+  outward, and `label_orientation = "tangential"` runs every label along
+  its arc.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  interactive widget no longer leaves the hover info panel stuck on its
+  placeholder (the missing `miniPieSvg` helper that drew each ancestor’s
+  proportion pie is now defined), the **Reset** button again returns the
+  chart to the root view (the toolbar state carrying the button
+  reference is now the one used for rendering), and clicking a wedge to
+  zoom keeps the overall circle size by rescaling the focused subtree to
+  fill the full radius.
+- [`break_outlier_axis()`](https://adrientaudiere.github.io/ggplotpq/reference/break_outlier_axis.md)
+  adds axis-break symbols (via **ggbreak**) at automatically detected
+  outlier gaps; gaps are found where the ratio of consecutive sorted
+  positive values exceeds `cutoff`; supports `"y"`, `"x"`, or `"both"`
+  axes and both direct-call and `+`-operator usage; gains
+  `space_proportional` (make the break-gap symbol proportional to the
+  data gap size) and `expand_cluster` (add breathing room above the
+  cluster maximum so boundary points are not clipped, default 5 %);
+  internal gap boundaries are now offset by 0.5 % so that the
+  cluster-maximum value stays in the lower panel and the first outlier
+  value stays in the upper panel.
+- [`zoom_outlier_axis()`](https://adrientaudiere.github.io/ggplotpq/reference/zoom_outlier_axis.md)
+  zooms the plot into the main data cluster (largest group of
+  consecutive values) using `coord_cartesian()` and draws an arrow with
+  the outlier value at the panel edge for each outlier point; works for
+  `"y"`, `"x"`, or `"both"` axes and supports both direct-call and
+  `+`-operator usage; gains `extra_margin` (automatically enlarges
+  `plot.margin` on the outlier side so that `clip = "off"` arrows and
+  labels are not cut by the device boundary, default 30 pt).
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  default for `ranks = "All"` now restricts to the seven classical
+  taxonomic ranks (Kingdom → Species) when at least two are present,
+  avoiding non-hierarchical annotation columns from appearing in the
+  chart; the interactive widget now shows a toolbar with a **Color by**
+  dropdown (pre-computes one colour set per rank on the R side), **Max
+  depth** and **Font size** selectors, a **Collapse** toggle (JS-side
+  single-child collapse), and the search box is integrated into the same
+  bar; the interactive sunburst now renders text labels on arcs wide
+  enough to hold them; the widget default height is 700 px;
+  `show_info_panel` is now correctly positioned (the container is set to
+  `position:relative`); static sunburst label rotation is fixed to
+  always stay in `[−90°, 90°]` using a single modulo normalisation;
+  outer-ring (leaf) labels in the static sunburst are now rendered in
+  dark ink since the outermost sections tend to be lighter;
+  [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  gains `check_nestedness` (default `TRUE`) to toggle the nestedness
+  validation warning, `collapse_single` to remove uninformative
+  single-child intermediate ranks, `color_as_numeric` to map any numeric
+  `tax_table()` column to a viridis gradient, `label_pct` (`"none"` /
+  `"total"` / `"parent"`) to append proportions to section labels,
+  `min_prop` to merge low-abundance siblings into a crosshatch-marked
+  `"n more"` aggregate, `show_center_count` (default `TRUE`) to display
+  the total count in the sunburst centre (and the focused node count on
+  zoom), `show_search` to add a live search box to the interactive
+  widget, and `show_info_panel` to add a hover info panel showing count
+  and percentages; also adds nestedness validation (`cli_warn` on
+  non-strictly-nested `tax_table`), middle-ellipsis label truncation,
+  and radially-oriented leaf-rank labels.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  interactive sunburst widget now draws labels with the same Krona
+  radial-outward layout as the static plot (radial, reading outward,
+  centred on each wedge, anchored at the band inner edge, never
+  upside-down, shown by angular width), so the static and interactive
+  views agree, and the labels stay correct after click-zoom; the static
+  sunburst no longer clips outward leaf labels at the cardinal edges
+  (uses `clip = "off"` plus a small plot margin); and a named
+  `weight_by` numeric vector is now aligned to
+  [`phyloseq::taxa_names()`](https://rdrr.io/pkg/phyloseq/man/taxa_names-methods.html)
+  (aborting on a names mismatch) instead of being used in positional
+  order.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  static sunburst labels now follow the original Krona layout: every
+  label runs radially, reading outward from the centre, centred on its
+  wedge and anchored at the inner edge of its ring band, with the anchor
+  flipping across the vertical axis so both halves read outward and no
+  text is upside-down; a label is shown whenever its wedge is angularly
+  wide enough to fit the text height (independent of label length)
+  rather than being hidden when too long, and only extremely long labels
+  are shortened with a middle ellipsis; the new `label_orientation`
+  argument (`"auto"`/`"radial"` or `"tangential"`) and the `grey_terms`
+  argument are now documented.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  now gives sections clearly distinct colours (each `color_by` value
+  gets its own hue and its descendants fan out across a hue band), draws
+  readable radial labels on the static sunburst and leaf-only
+  top-anchored labels on the static treemap, and gains a `pattern`
+  argument to overlay a faint grey dotted motif on alternate sections
+  (static plots, via `ggpattern`); the interactive widget now bundles
+  D3.js correctly so it renders instead of showing only the title.
+
+## ggplotpq 0.0.0
+
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  builds Krona-style interactive (D3.js zoomable sunburst or treemap,
+  via `htmlwidgets`) or static (pure ggplot2) taxonomy explorer from a
+  `phyloseq` object, without requiring KronaTools; the interactive
+  widget works on all platforms including Windows, and can be saved as a
+  self-contained `.html` file.
 - Add a “Get started with ggplotpq” vignette and a pkgdown website
   skeleton.
 - [`comet_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/comet_pq.md)

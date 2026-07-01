@@ -45,6 +45,12 @@ Theme and palette helpers migrated from taxinfo.
 Pure-ggplot2 helpers for phyloseq objects (geoms, themes, scales,
 palettes).
 
+- [`break_outlier_axis()`](https://adrientaudiere.github.io/ggplotpq/reference/break_outlier_axis.md)
+  : Add axis breaks to show outlier values
+
+- [`zoom_outlier_axis()`](https://adrientaudiere.github.io/ggplotpq/reference/zoom_outlier_axis.md)
+  : Zoom into the non-outlier region and annotate outliers with arrows
+
 - [`comet_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/comet_pq.md)
   : Comet plot for paired or multi-step measurements from a phyloseq
   object
@@ -70,6 +76,9 @@ palettes).
 
   Default metrics for
   [`community_sharing_plot()`](https://adrientaudiere.github.io/ggplotpq/reference/community_sharing_plot.md)
+
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  : Krona-like interactive taxonomy plot from a phyloseq object
 
 - [`palette_earthtones()`](https://adrientaudiere.github.io/ggplotpq/reference/palette_earthtones.md)
   : Derive a colour palette from a geographic location
@@ -99,3 +108,13 @@ palettes).
 
 Analysis wrappers that ship a ggplot (the analysis lives here, the plot
 is the deliverable).
+
+- [`neg_control_diag_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/neg_control_diag_pq.md)
+  : Diagnose contamination from negative controls
+
+## Workflow tracking
+
+Helpers to visualise workflow tracking output from MiscMetabar.
+
+- [`track_wkflow_formattable()`](https://adrientaudiere.github.io/ggplotpq/reference/track_wkflow_formattable.md)
+  : Formattable view of track_wkflow output with nesting tree

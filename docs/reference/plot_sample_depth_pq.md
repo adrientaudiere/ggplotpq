@@ -8,6 +8,14 @@ for a phyloseq object. Useful as a quick QA plot to identify low-depth
 samples before downstream analyses. A reference line at `threshold`
 (when supplied) is drawn to make the cutoff visible.
 
+When `add_violin = TRUE` and `color_fac` is supplied, a marginal violin
+plot is placed to the right of the bar plot. Both panels share the
+y-axis (sequencing depth): panel A shows the vertical per-sample bars,
+panel B shows a vertical violin of depth by `color_fac` with jittered
+points (`alpha = 0.5`) for individual samples. This makes it easy to
+judge, at a glance, whether sequencing depth differs between groups of
+samples.
+
 ## Usage
 
 ``` r
@@ -17,7 +25,8 @@ plot_sample_depth_pq(
   color_fac = NULL,
   threshold = NULL,
   log10 = FALSE,
-  sort = FALSE
+  sort = FALSE,
+  add_violin = FALSE
 )
 ```
 
@@ -38,7 +47,9 @@ plot_sample_depth_pq(
 
   (character, default NULL) Optional name of a column in
   [`phyloseq::sample_data()`](https://rdrr.io/pkg/phyloseq/man/sample_data-methods.html)
-  to color the bars by. Ignored when `geom = "density"`.
+  to fill the bars/violin/density by. Non-categorical columns are
+  coerced to factor. When `geom = "density"`, one overlapping density
+  curve is drawn per level of `color_fac`.
 
 - threshold:
 
@@ -55,10 +66,20 @@ plot_sample_depth_pq(
   (logical, default FALSE) If TRUE, samples are sorted from highest to
   lowest depth. Useful for bar plots to spot outliers at a glance.
 
+- add_violin:
+
+  (logical, default FALSE) If TRUE, a marginal violin plot of depth by
+  `color_fac` (with jittered points, `alpha = 0.5`) is placed to the
+  right of the bar plot. Both panels share the y-axis (depth). Requires
+  `color_fac` to be non-NULL and `geom = "bar"`; otherwise a warning is
+  issued and the parameter is ignored.
+
 ## Value
 
 A [ggplot2::ggplot](https://ggplot2.tidyverse.org/reference/ggplot.html)
-object.
+object, or a
+[patchwork::patchwork](https://patchwork.data-imaginist.com/reference/patchwork-package.html)
+object when `add_violin = TRUE`.
 
 ## Author
 
@@ -74,7 +95,13 @@ plot_sample_depth_pq(data_fungi_mini)
 plot_sample_depth_pq(data_fungi_mini, geom = "density", log10 = TRUE)
 
 plot_sample_depth_pq(data_fungi_mini, color_fac = "Height", sort = TRUE)
-#> Warning: Ignoring empty aesthetic: `fill`.
+
+plot_sample_depth_pq(data_fungi_mini, color_fac = "Height",
+  add_violin = TRUE, log10 = TRUE, threshold = 8000)
+
+plot_sample_depth_pq(data_fungi_mini, color_fac = "Time",
+  geom = "density", log10 = TRUE)
+#> "Time" is not categorical (class integer); coercing to factor.
 
 # }
 ```
