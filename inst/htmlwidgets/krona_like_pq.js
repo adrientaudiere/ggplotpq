@@ -212,7 +212,7 @@ HTMLWidgets.widget({
       var state = {
         collapse: saved.collapse !== undefined ? saved.collapse : !!opts.collapseEnabled,
         maxDepth: saved.maxDepth || totalDepth,
-        fontSize: saved.fontSize || 10,
+        fontSize: saved.fontSize || 9,
         colorBy: saved.colorBy || opts.defaultColorBy || (ranks[0] || "")
       };
 
@@ -347,12 +347,15 @@ HTMLWidgets.widget({
     function renderSunburst(data, w, h, x, state) {
       var opts = x.options || {};
       var maxDepth = state ? state.maxDepth : 99;
-      var fontSize = state ? state.fontSize : 10;
+      var fontSize = state ? state.fontSize : 9;
       var colorBy  = state ? state.colorBy  : (opts.defaultColorBy || "");
 
-      // Enforce a minimum size so the chart is readable.
+      // Enforce a minimum size so the chart is readable. Leaf labels sit
+      // outside the rim by default (see LEAF_PAD below), so a fixed margin
+      // is reserved from the circle's own radius rather than the canvas.
       var size = Math.max(200, Math.min(w, h - 44) - 10);
-      var radius = size / 2;
+      var LEAF_ROOM = 60;
+      var radius = Math.max(60, size / 2 - LEAF_ROOM);
 
       svg = d3.select(el).append("svg")
         .attr("width", w)
@@ -413,13 +416,28 @@ HTMLWidgets.widget({
         .on("mouseout", hideTooltip);
 
 
-      // ---- Krona-style radial labels -----------------------------------------
-      // Every label runs ALONG THE RADIUS, reading outward from the centre,
-      // centred on its wedge and anchored at the inner edge of its ring band,
-      // matching the static ggplot path. On the left half (mid > PI) the frame
-      // is rotated 180 deg and the caller sets text-anchor to "end" so the
-      // label still reads outward and is never upside-down. `mid` is the wedge
-      // mid-angle in radians (clockwise from north); `r` is the anchor radius.
+      // ---- Krona-style radial/tangential labels ------------------------------
+      // Leaf labels default to RADIAL (a spoke reading straight outward,
+      // anchored outside the coloured rim by LEAF_PAD), falling back to
+      // TANGENTIAL (running along the arc) only when the wedge is too
+      // narrow for a spoke. Internal labels default to TANGENTIAL (reading
+      // around their own ring band), falling back to RADIAL only when even
+      // that does not fit -- the opposite priority from leaf labels, and a
+      // thin-wedge dot is the last resort for both. This matches the static
+      // R path's "auto" styling (leaf = spoke, internal = arc-following).
+      // Classification is recomputed on every zoom (see `classifyLabels`)
+      // since a wedge's angular width relative to the full circle changes
+      // once an ancestor becomes the new focus.
+      var LEAF_PAD = 14;
+
+      function isLeaf(d) {
+        return !d.children || d.children.length === 0;
+      }
+      // On the right half (mid < PI) the anchor is the start of the text so
+      // it reads outward; on the left half text is rotated 180 deg and
+      // anchored at its end, so it still reads outward and is never
+      // upside-down. `mid` is the wedge mid-angle in radians (clockwise from
+      // north); `r` is the anchor radius.
       function radialLabelTransform(mid, r) {
         var x = mid * 180 / Math.PI;
         var extra = x > 180 ? 180 : 0;
@@ -428,10 +446,16 @@ HTMLWidgets.widget({
       function radialAnchor(mid) {
         return mid > Math.PI ? "end" : "start";
       }
-      // Centred tangential placement, used only for the thin-wedge dot marker.
-      function dotTransform(mid, r) {
+      // Tangential text's own "upright" direction rotates through vertical at
+      // the EAST/WEST cardinal points (mid = 90 deg/270 deg, since d3's
+      // angle 0 is north) -- a different axis than the radial case above,
+      // which flips at north/south instead. Flipping at the wrong axis (a
+      // past bug here) leaves text near-upside-down through most of one
+      // hemisphere; verified against a synthetic 8-wedge test circle.
+      function tangentialLabelTransform(mid, r) {
         var x = mid * 180 / Math.PI;
-        var textRot = x < 180 ? 90 : 270;
+        var norm = ((x % 360) + 360) % 360;
+        var textRot = (norm > 90 && norm < 270) ? 270 : 90;
         return "rotate(" + (x - 90) + ") translate(" + r + ",0) rotate(" + textRot + ")";
       }
       // Middle-ellipsis shortening for pathologically long names only.
@@ -440,61 +464,167 @@ HTMLWidgets.widget({
         var half = Math.max(1, Math.floor((n - 1) / 2));
         return name.slice(0, half) + "…" + name.slice(name.length - half);
       }
-      // A label shows when its wedge is angularly wide enough to fit the text
-      // height (arc length at the band mid radius >= ~one line) — independent of
+      // Radial fit: the wedge must be angularly wide enough (at its own
+      // band mid-radius) to fit the font's physical height -- independent of
       // label length, mirroring Krona's minWidth() rule and the static path.
-      function labelFits(d) {
-        var rMid = (d.y0 + d.y1) / 2;
-        return (d.x1 - d.x0) * rMid >= fontSize * 1.25;
+      function radialFits(arcw, rMid) {
+        return arcw * rMid >= fontSize * 1.25;
+      }
+      // Tangential fit: text width (chars * ~0.62 * fontSize, the same
+      // character-width heuristic already used for the treemap labels) must
+      // fit the arc length at the band mid-radius.
+      function tangentialFits(name, arcw, rMid) {
+        return name.length * fontSize * 0.62 <= arcw * rMid;
       }
 
-      var MIN_ARC = 0.05;
-      // Inner segments of a fill chain are not labelled (only the outermost is).
+      // ---- Thin out radially-oriented labels that would visually collide ----
+      // Port of the static R path's `.dismiss_overlapping_labels()`: sort
+      // candidates by value descending, keep one only if it is >= minGap
+      // radians from every already-kept label *in the same group* (group =
+      // same physical ring, so an internal label and an unrelated leaf
+      // callout -- different radii -- are never compared). Returns the
+      // array of dismissed (losing) nodes.
+      var dismissOverlaps = true;
+      function dismissOverlappingLabels(nodes, minGap, groupFn) {
+        var sorted = nodes.slice().sort(function (a, b) { return b.value - a.value; });
+        var keptAngles = {};
+        var dismissed = [];
+        sorted.forEach(function (d) {
+          var g = String(groupFn(d));
+          var prev = keptAngles[g];
+          var ok = !prev || prev.every(function (a) {
+            return Math.abs(((a - d._mid + Math.PI) % (2 * Math.PI)) - Math.PI) >= minGap;
+          });
+          if (ok) {
+            (keptAngles[g] = keptAngles[g] || []).push(d._mid);
+          } else {
+            dismissed.push(d);
+          }
+        });
+        return dismissed;
+      }
+
+      // Inner segments of a fill chain are not labelled (only the outermost
+      // is). Deliberately NOT pre-filtered by angular width here: whether a
+      // wedge has room for a label depends on the CURRENT zoom (its angular
+      // width relative to the current focus, rescaled in `classifyLabels`),
+      // not its width in the full, un-zoomed tree. A wedge too thin to label
+      // at the root view can easily fill most of the circle once zoomed into
+      // its parent, and must be re-classified then -- not permanently
+      // excluded because it missed a one-time filter computed before any
+      // zoom happened. `radialFits`/`tangentialFits` (called from
+      // `classifyLabels` with the rescaled width) are what actually decide
+      // whether a wedge gets a real label, falling back to a dot otherwise.
       var allVisible = root.descendants().filter(function (d) {
         return d.depth > 0 && d.depth <= maxDepth &&
-          (d.x1 - d.x0) > MIN_ARC && !isChainInner(d);
+          (d.x1 - d.x0) > 0 && !isChainInner(d);
       });
 
-      // ---- dot markers for wedges too thin to fit any label ----
-      g.selectAll("text.dot-marker")
-        .data(allVisible.filter(function (d) { return !labelFits(d); }))
+      var labelSel = g.selectAll("text.krona-label")
+        .data(allVisible)
         .enter().append("text")
-        .attr("class", "dot-marker")
+        .attr("class", "krona-label")
         .style("pointer-events", "none")
-        .style("font-size", (fontSize + 2) + "px")
-        .style("fill", function (d) {
-          return (d.depth === maxDepth || d.data.is_aggregate) ? "#444" : "#fff";
-        })
-        .attr("text-anchor", "middle")
-        .attr("dominant-baseline", "middle")
-        .attr("transform", function (d) {
-          var mid = (d.x0 + d.x1) / 2, r = (d.y0 + d.y1) / 2;
-          return dotTransform(mid, r);
-        })
-        .text("·");
+        .attr("dominant-baseline", "middle");
 
-      // ---- radial arc labels, reading outward from the band inner edge ----
-      var labelData = allVisible.filter(labelFits);
+      // Recompute every label's rescaled angle, orientation, and overlap
+      // status against the current zoom focus `v`, then update the shared
+      // selection. Called once at initial render (v = root) and again as
+      // the first step of every `zoomTo(v)`.
+      function classifyLabels(v) {
+        var x0 = v.x0, angle = v.x1 - v.x0;
+        var maxY = v.y1;
+        v.each(function (d) { if (d.y1 > maxY) maxY = d.y1; });
+        var yScale = maxY > v.y0 ? radius / (maxY - v.y0) : 1;
+        var ry = function (y) {
+          return Math.max(0, Math.min(radius, (y - v.y0) * yScale));
+        };
+        var inSubtree = new Set(v.descendants());
+        inSubtree.delete(v);
 
-      g.selectAll("text.arc-label")
-        .data(labelData)
-        .enter().append("text")
-        .attr("class", "arc-label")
-        .style("pointer-events", "none")
-        .style("font-size", fontSize + "px")
-        .style("font-weight", "600")
-        .style("fill", function (d) {
-          return (d.depth === maxDepth || d.data.is_aggregate) ? "#111" : "#fff";
-        })
-        .attr("dominant-baseline", "middle")
-        .attr("text-anchor", function (d) {
-          return radialAnchor((d.x0 + d.x1) / 2);
-        })
-        .attr("transform", function (d) {
-          var mid = (d.x0 + d.x1) / 2;
-          return radialLabelTransform(mid, d.y0 + 2);
-        })
-        .text(function (d) { return shortenMid(d.data.name, 30); });
+        // The rescale formulas below are only meaningful for actual
+        // descendants of the focus `v` -- for any other (hidden) node,
+        // `(d.x0 - x0) / angle` divides by an angle that has nothing to do
+        // with that node's position, producing near-arbitrary nx0/nx1.
+        // Classifying those anyway would let their garbage `_mid` values
+        // leak into the overlap-dismissal comparison below and wrongly
+        // demote real, visible candidates. Give hidden nodes a trivial
+        // "dot" role (irrelevant, since they're display:none) and skip them.
+        var labelCands = [];
+        allVisible.forEach(function (d) {
+          if (!inSubtree.has(d)) {
+            d._role = "dot";
+            return;
+          }
+          var nx0 = ((d.x0 - x0) / angle) * 2 * Math.PI;
+          var nx1 = ((d.x1 - x0) / angle) * 2 * Math.PI;
+          d._mid = (nx0 + nx1) / 2;
+          var arcw = nx1 - nx0;
+          var leaf = isLeaf(d);
+          var rMid = leaf ? radius : (ry(d.y0) + ry(d.y1)) / 2;
+          d._leaf = leaf;
+          d._r = leaf ? (radius + LEAF_PAD) : rMid;
+          d._room = leaf ? 40 : Math.max(4, Math.floor(
+            (ry(d.y1) - ry(d.y0)) / (fontSize * 0.62)
+          ));
+          if (leaf) {
+            if (radialFits(arcw, rMid)) {
+              d._role = "radial";
+              labelCands.push(d);
+            } else if (tangentialFits(d.data.name, arcw, rMid)) {
+              d._role = "tangential";
+              d._r = radius;
+              labelCands.push(d);
+            } else {
+              d._role = "dot";
+            }
+          } else if (tangentialFits(d.data.name, arcw, rMid)) {
+            d._role = "tangential";
+            labelCands.push(d);
+          } else if (radialFits(arcw, rMid)) {
+            d._role = "radial";
+            labelCands.push(d);
+          } else {
+            d._role = "dot";
+          }
+        });
+
+        if (dismissOverlaps && labelCands.length > 0) {
+          dismissOverlappingLabels(labelCands, 0.26, function (d) {
+            return d._leaf ? "leaf" : d.depth;
+          }).forEach(function (d) { d._role = "dot"; });
+        }
+
+        labelSel
+          .style("display", function (d) { return inSubtree.has(d) ? null : "none"; })
+          .style("font-size", function (d) {
+            return (d._role === "dot" ? fontSize + 2 : fontSize) + "px";
+          })
+          .style("fill", function (d) {
+            if (d._role === "dot") {
+              return (d._leaf || d.data.is_aggregate) ? "#444" : "#fff";
+            }
+            return (d._leaf || d.data.is_aggregate) ? "#111" : "#fff";
+          })
+          .text(function (d) {
+            if (d._role === "dot") return "·";
+            return shortenMid(d.data.name, d._room);
+          })
+          .attr("text-anchor", function (d) {
+            if (d._role === "tangential") return "middle";
+            if (d._role === "dot") return "middle";
+            return radialAnchor(d._mid);
+          })
+          .transition().duration(550)
+          .attr("transform", function (d) {
+            if (d._role === "tangential" || d._role === "dot") {
+              return tangentialLabelTransform(d._mid, d._r);
+            }
+            return radialLabelTransform(d._mid, d._r);
+          });
+      }
+
+      classifyLabels(root);
 
       // Centre count label — placed at (0, 0) which is the pole of the chart.
       var centerLabel = null;
@@ -539,7 +669,20 @@ HTMLWidgets.widget({
         var ry = function (y) {
           return Math.max(0, Math.min(radius, (y - y0) * yScale));
         };
-        g.selectAll("path").transition().duration(550)
+        // The rescale formulas above are only valid for nodes strictly inside
+        // the focused subtree: an ancestor or an unrelated sibling has
+        // y0 <= v.y0, so `ry` clamps it to 0 -- collapsing its wedge (and
+        // label) onto the centre point instead of leaving the view. Hide
+        // everything outside `v`'s own descendants (v itself included, so
+        // the focus becomes the blank hub around the centre count).
+        var inSubtree = new Set(v.descendants());
+        inSubtree.delete(v);
+        function focused(d) { return inSubtree.has(d); }
+
+        g.selectAll("path")
+          .style("display", function (d) { return focused(d) ? null : "none"; })
+          .style("pointer-events", function (d) { return focused(d) ? null : "none"; })
+          .transition().duration(550)
           .attrTween("d", function (d) {
             var i = d3.interpolate(
               { x0: d.x0, x1: d.x1, y0: d.y0, y1: d.y1 },
@@ -552,26 +695,7 @@ HTMLWidgets.widget({
             );
             return function (t) { return arc(i(t)); };
           });
-        g.selectAll("text.arc-label").transition().duration(550)
-          .attr("text-anchor", function (d) {
-            var nx0 = ((d.x0 - x0) / angle) * 2 * Math.PI;
-            var nx1 = ((d.x1 - x0) / angle) * 2 * Math.PI;
-            return radialAnchor((nx0 + nx1) / 2);
-          })
-          .attr("transform", function (d) {
-            var nx0 = ((d.x0 - x0) / angle) * 2 * Math.PI;
-            var nx1 = ((d.x1 - x0) / angle) * 2 * Math.PI;
-            var mid = (nx0 + nx1) / 2;
-            return radialLabelTransform(mid, ry(d.y0) + 2);
-          });
-        g.selectAll("text.dot-marker").transition().duration(550)
-          .attr("transform", function (d) {
-            var nx0 = ((d.x0 - x0) / angle) * 2 * Math.PI;
-            var nx1 = ((d.x1 - x0) / angle) * 2 * Math.PI;
-            var mid = (nx0 + nx1) / 2;
-            var r = (ry(d.y0) + ry(d.y1)) / 2;
-            return dotTransform(mid, r);
-          });
+        classifyLabels(v);
         if (centerLabel) {
           centerLabel.text("n = " + cgpmFmt(v.value));
         }
@@ -613,7 +737,7 @@ HTMLWidgets.widget({
     function renderTreemap(data, w, h, x, state) {
       var opts = x.options || {};
       var maxDepth = state ? state.maxDepth : 99;
-      var fontSize = state ? state.fontSize : 10;
+      var fontSize = state ? state.fontSize : 9;
       var colorBy  = state ? state.colorBy  : (opts.defaultColorBy || "");
 
       var innerW = Math.max(120, w - 8);
@@ -761,7 +885,17 @@ HTMLWidgets.widget({
         var dx = v.x0, dy = v.y0, dw = v.x1 - v.x0, dh = v.y1 - v.y0;
         if (dw <= 0 || dh <= 0) return;
         var kx = innerW / dw, ky = innerH / dh;
-        g.selectAll("g.cell").transition().duration(450)
+        // Same rescale-the-whole-tree issue as the sunburst: a cell outside
+        // v's own subtree is not meant to be positioned by this formula and
+        // can land anywhere (including overlapping the zoomed content), so
+        // hide anything that is not v itself or one of its descendants.
+        var inSubtree = new Set(v.descendants());
+        function focused(d) { return inSubtree.has(d); }
+
+        g.selectAll("g.cell")
+          .style("display", function (d) { return focused(d) ? null : "none"; })
+          .style("pointer-events", function (d) { return focused(d) ? null : "none"; })
+          .transition().duration(450)
           .attr("transform", function (d) {
             return "translate(" + (d.x0 - dx) * kx + "," + (d.y0 - dy) * ky + ")";
           });

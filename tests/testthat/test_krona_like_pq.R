@@ -548,7 +548,7 @@ test_that("all label modes keep angles within [-90, 90]", {
   }
 })
 
-test_that("label_orientation = 'radial' anchors every label by side (aes hjust)", {
+test_that("label_orientation = 'radial' centres internal labels, anchors leaf labels by side", {
   p <- krona_like_pq(
     data_fungi_mini,
     interactive = FALSE,
@@ -556,7 +556,12 @@ test_that("label_orientation = 'radial' anchors every label by side (aes hjust)"
     check_nestedness = FALSE
   )
   lays <- .label_text_layers(p)
-  expect_true(all(vapply(lays, .maps_hjust, logical(1))))
+  # Internal radial labels are centred (constant hjust = 0.5, not mapped);
+  # leaf radial labels still read outward and need the hemisphere-based
+  # hjust, so at least one layer maps it and at least one does not.
+  maps <- vapply(lays, .maps_hjust, logical(1))
+  expect_true(any(maps))
+  expect_true(any(!maps))
 })
 
 test_that("label_orientation = 'tangential' centres every label (no aes hjust)", {
@@ -570,7 +575,7 @@ test_that("label_orientation = 'tangential' centres every label (no aes hjust)",
   expect_false(any(vapply(lays, .maps_hjust, logical(1))))
 })
 
-test_that("label_orientation = 'auto' anchors radial labels by side", {
+test_that("label_orientation = 'auto' centres internal labels, anchors leaf labels by side", {
   p <- krona_like_pq(
     data_fungi_mini,
     interactive = FALSE,
@@ -578,11 +583,12 @@ test_that("label_orientation = 'auto' anchors radial labels by side", {
     check_nestedness = FALSE
   )
   lays <- .label_text_layers(p)
-  # internal radial + external leaf labels both anchor by side (aes hjust)
-  expect_true(all(vapply(lays, .maps_hjust, logical(1))))
+  maps <- vapply(lays, .maps_hjust, logical(1))
+  expect_true(any(maps))
+  expect_true(any(!maps))
 })
 
-test_that("only 'auto' draws external leaf leader lines (GeomSegment)", {
+test_that("leaf labels outside the rim draw a leader line by default; padding <= 0.03 omits it", {
   has_seg <- function(p) {
     any(vapply(
       p$layers,
@@ -590,20 +596,32 @@ test_that("only 'auto' draws external leaf leader lines (GeomSegment)", {
       logical(1)
     ))
   }
-  pa <- krona_like_pq(
+  # Every mode except pure "tangential" places leaf labels outside the rim
+  # by default (leaf_label_padding > 0.03), so all of them draw a leader.
+  for (mode in c("auto", "radial", "mixed", "adaptive")) {
+    p <- krona_like_pq(
+      data_fungi_mini,
+      interactive = FALSE,
+      label_orientation = mode,
+      check_nestedness = FALSE
+    )
+    expect_true(has_seg(p), info = mode)
+  }
+  p_tang <- krona_like_pq(
     data_fungi_mini,
     interactive = FALSE,
-    label_orientation = "auto",
+    label_orientation = "tangential",
     check_nestedness = FALSE
   )
-  pr <- krona_like_pq(
+  expect_false(has_seg(p_tang))
+  p_zero_pad <- krona_like_pq(
     data_fungi_mini,
     interactive = FALSE,
     label_orientation = "radial",
+    leaf_label_padding = 0,
     check_nestedness = FALSE
   )
-  expect_true(has_seg(pa))
-  expect_false(has_seg(pr))
+  expect_false(has_seg(p_zero_pad))
 })
 
 # ---- grey_terms ------------------------------------------------------------
@@ -780,7 +798,12 @@ test_that(".collapse_single_children records the skipped path", {
   expect_true("Family" %in% res$children[[1]]$collapsed_path)
 })
 
-test_that("show_collapsed_path prefixes collapsed labels with the path", {
+test_that("show_collapsed_path marks collapsed labels distinctly", {
+  # Internal radial labels are now centred within their own single-ring band
+  # (see leaf/internal centring fix), so a long "path / name" prefix can be
+  # truncated past the point where the literal " / " survives; the robust
+  # signal that show_collapsed_path took effect is the dedicated grey ink
+  # (#555555) applied to every collapsed-path row before truncation.
   p <- krona_like_pq(
     data_fungi_mini,
     interactive = FALSE,
@@ -789,8 +812,8 @@ test_that("show_collapsed_path prefixes collapsed labels with the path", {
     check_nestedness = FALSE
   )
   lays <- .label_text_layers(p)
-  labs <- unlist(lapply(lays, function(l) l$data$lab))
-  expect_true(any(grepl(" / ", labs, fixed = TRUE)))
+  cols <- unlist(lapply(lays, function(l) l$data$col))
+  expect_true(any(cols == "#555555"))
 })
 
 test_that("show_collapsed_path = FALSE leaves labels without a path", {
@@ -859,11 +882,16 @@ test_that("label_orientation = 'mixed' has both tangential and radial layers", {
   expect_true(any(!vapply(lays, .maps_hjust, logical(1))))
 })
 
-test_that("label_orientation = 'mixed' never draws external leader lines", {
+test_that("label_orientation = 'mixed' leaf labels sit outside the rim like every other mode", {
+  # Leaf-radial placement is unified across modes (rim + leaf_label_padding);
+  # "mixed" no longer has a separate inside-the-rim leaf style, so it draws a
+  # leader line under the default padding just like auto/radial/adaptive
+  # (covered together in the "leaf labels outside the rim" test above).
   p <- krona_like_pq(
     data_fungi_mini,
     interactive = FALSE,
     label_orientation = "mixed",
+    leaf_label_padding = 0,
     check_nestedness = FALSE
   )
   has_seg <- any(vapply(
@@ -1030,4 +1058,178 @@ test_that("invalid label_fallback aborts", {
       label_fallback = "wrong"
     )
   )
+})
+
+# ---- leaf_label_padding / internal radial centring -------------------------
+
+test_that("leaf radial labels sit outside the rim by default (anchor > rim)", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "radial",
+    check_nestedness = FALSE
+  )
+  lays <- .label_text_layers(p)
+  # Leaf layers use hjust (aes-mapped); their y column is the outside-rim
+  # anchor, which must exceed the leaf depth (i.e. the rim).
+  leaf_lays <- Filter(.maps_hjust, lays)
+  expect_gt(length(leaf_lays), 0)
+  for (l in leaf_lays) {
+    y_col <- l$mapping$y
+    y_vals <- rlang::eval_tidy(y_col, l$data)
+    expect_true(all(y_vals > l$data$depth))
+  }
+})
+
+test_that("negative leaf_label_padding pulls leaf labels back toward the rim", {
+  p_out <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "radial",
+    leaf_label_padding = 0.5,
+    check_nestedness = FALSE
+  )
+  p_in <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "radial",
+    leaf_label_padding = -0.5,
+    check_nestedness = FALSE
+  )
+  max_y <- function(p) {
+    lays <- Filter(.maps_hjust, .label_text_layers(p))
+    max(unlist(lapply(lays, function(l) {
+      rlang::eval_tidy(l$mapping$y, l$data)
+    })))
+  }
+  expect_gt(max_y(p_out), max_y(p_in))
+})
+
+test_that("internal radial labels centre on their own band", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "radial",
+    check_nestedness = FALSE
+  )
+  lays <- .label_text_layers(p)
+  # Internal layers do not map hjust (constant 0.5 now); their y anchor
+  # should equal depth + 0.5, the centre of a single-ring band.
+  inner_lays <- Filter(function(l) !.maps_hjust(l), lays)
+  expect_gt(length(inner_lays), 0)
+  for (l in inner_lays) {
+    y_col <- l$mapping$y
+    y_vals <- rlang::eval_tidy(y_col, l$data)
+    expect_equal(y_vals, l$data$depth + 0.5)
+  }
+})
+
+test_that("default leaf labels read as a spoke, internal labels as arc-following", {
+  # Regression test for the visual-effect/naming mismatch discovered while
+  # implementing this: under coord_polar(start = -pi/2), the formula that
+  # keeps its OWN flip axis at data-x = 0/pi renders arc-following, and the
+  # one flipping at data-x = pi/2/3*pi/2 renders as a spoke -- confirmed by
+  # rendering a synthetic 8-wedge test circle with each formula, independent
+  # of this package's naming. Leaf labels (`auto` default) must use the
+  # spoke-look formula; internal labels must keep the arc-following one.
+  ang_norm <- function(a) ((a + 90) %% 180) - 90
+  ang_radial_of <- function(x) ang_norm(-(x / (2 * pi)) * 360 + 90)
+  ang_tang_of <- function(x) ang_norm(-(x / (2 * pi)) * 360)
+
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    check_nestedness = FALSE
+  )
+  lays <- .label_text_layers(p)
+  leaf_lays <- Filter(.maps_hjust, lays)
+  inner_lays <- Filter(function(l) !.maps_hjust(l), lays)
+  expect_gt(length(leaf_lays), 0)
+  expect_gt(length(inner_lays), 0)
+  for (l in leaf_lays) {
+    expect_equal(l$data$ang, ang_tang_of(l$data$xmid))
+  }
+  for (l in inner_lays) {
+    expect_equal(l$data$ang, ang_radial_of(l$data$xmid))
+  }
+})
+
+test_that("leaf hjust flips at the same axis as its own rotation formula", {
+  # hj_side must switch at data-x = pi/2 and 3*pi/2 (the spoke-look formula's
+  # own flip axis), not at pi (a mismatch here made labels fold back over
+  # their own wedge instead of extending outward -- caught by rendering).
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "radial",
+    check_nestedness = FALSE
+  )
+  leaf_lays <- Filter(.maps_hjust, .label_text_layers(p))
+  for (l in leaf_lays) {
+    hj <- rlang::eval_tidy(l$mapping$hjust, l$data)
+    expected <- ifelse(
+      l$data$xmid > pi / 2 & l$data$xmid < 3 * pi / 2,
+      0,
+      1
+    )
+    expect_equal(hj, expected)
+  }
+})
+
+# ---- label_fallback = "legend" ----------------------------------------------
+
+test_that(".assign_unique_codes returns unique codes, disambiguating collisions", {
+  codes <- ggplotpq:::.assign_unique_codes(
+    c("Stereum", "Stereaceae", "Steccherinaceae"),
+    nchar_cap = 3
+  )
+  expect_equal(length(codes), length(unique(codes)))
+  expect_true(all(nchar(codes) >= 3))
+})
+
+test_that(".assign_unique_codes falls back to a numeric suffix when exhausted", {
+  # "AB" has only two possible 3-char windows is none (shorter than cap);
+  # forcing repeats should still yield unique codes via numeric suffixes.
+  codes <- ggplotpq:::.assign_unique_codes(c("AB", "AB", "AB"), nchar_cap = 3)
+  expect_equal(length(codes), length(unique(codes)))
+})
+
+test_that(".legend_fallback assigns a code when it fits, else a number, else NA", {
+  df <- data.frame(
+    name = c("Amanita", "B"),
+    arcw = c(10, 0.001),
+    ymid = c(5, 5),
+    stringsAsFactors = FALSE
+  )
+  res <- ggplotpq:::.legend_fallback(df, nchar_cap = 3, cw = 0.16)
+  expect_false(is.na(res$marker[1]))
+  expect_equal(nrow(res$legend), sum(!is.na(res$marker)))
+})
+
+test_that("label_fallback = 'legend' renders a legend annotation and short markers", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "adaptive",
+    label_fallback = "legend",
+    check_nestedness = FALSE
+  )
+  expect_s3_class(p, "ggplot")
+  marker_layer <- Filter(
+    function(l) inherits(l$geom, "GeomText") && "marker" %in% names(l$data),
+    p$layers
+  )
+  expect_gt(length(marker_layer), 0)
+  markers <- marker_layer[[1]]$data$marker
+  expect_true(all(nchar(markers) <= 3))
+  is_annotate_text <- vapply(
+    p$layers,
+    function(l) {
+      inherits(l$geom, "GeomText") &&
+        !is.null(l$aes_params[["label"]]) &&
+        grepl("—", l$aes_params[["label"]], fixed = TRUE)
+    },
+    logical(1)
+  )
+  expect_true(any(is_annotate_text))
 })

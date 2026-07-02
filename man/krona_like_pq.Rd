@@ -24,9 +24,10 @@ krona_like_pq(
   grey_terms = c(NA_character_, "unassigned", "unknown"),
   label_orientation = c("auto", "tangential", "radial", "mixed", "adaptive"),
   dismiss_overlaps = TRUE,
-  label_fallback = c("dot", "initials", "none"),
+  label_fallback = c("dot", "initials", "none", "legend"),
   fallback_symbol = "·",
   fallback_nchar = 3,
+  leaf_label_padding = 0.08,
   show_search = FALSE,
   show_info_panel = FALSE,
   check_nestedness = TRUE,
@@ -149,43 +150,51 @@ uninformative taxa. \code{NA} matches sections with a missing name. Pass
 \code{character(0)} to disable.}
 
 \item{label_orientation}{(character, default \code{"auto"}) Static sunburst
-only. Controls how section labels are placed. \code{"auto"} (default):
-\strong{internal} labels are \strong{radial} (running along the radius), centred on
-their wedge and reading outward from the band inner edge, shortened to the
-radial room so they stay within ~their ring; \strong{leaf} labels are placed
-\strong{outside the rim}, radial and reading outward, each linked to its wedge
-by a short grey leader line. \code{"radial"} is the same but keeps the leaf
-labels inside the circle (the original Krona style). \code{"tangential"} runs
-every label along its arc, centred in the band, shown only when the name
-fits. \code{"mixed"} draws \strong{internal} labels tangentially (circular) and
-\strong{leaf} labels radially, anchored at the band inner edge like
-\code{"radial"}'s leaf style (never outside the rim). \code{"adaptive"} tries the
-tangential placement first for every label (internal and leaf) and falls
-back to the radial placement only when the name does not fit the arc.
-In all modes text is normalised to never appear upside-down, merged fill
-chains are labelled once, and a label with nowhere to go gets the
-\code{label_fallback} marker instead. See \code{dismiss_overlaps} for thinning
-crowded radial labels and \code{label_fallback} for what replaces a label that
-cannot be shown.}
+only. Controls how section labels are placed.
+\itemize{
+\item \code{"auto"} / \code{"radial"}: \strong{internal} labels run \strong{along their own ring
+band} (arc-following, never upside-down), centred; \strong{leaf} labels
+are \strong{radial}, a spoke reading straight outward from the centre,
+placed outside the coloured arc by \code{leaf_label_padding} (\code{"radial"}
+differs from \code{"auto"} only in historical naming -- both place leaf
+labels outside the rim by default now).
+\item \code{"tangential"}: every label (internal and leaf) runs along its arc,
+centred in the band, shown only when the name fits.
+\item \code{"mixed"}: \strong{internal} labels are tangential (circular); \strong{leaf}
+labels are radial, outside the rim like above.
+\item \code{"adaptive"}: every label (internal and leaf) tries the radial
+placement first and falls back to tangential only when radial does not
+fit the arc.
+In every mode, a label with nowhere to go gets the \code{label_fallback}
+marker; see \code{dismiss_overlaps} for thinning crowded radial labels and
+\code{leaf_label_padding} for how far outside the rim leaf labels sit.
+The interactive widget mirrors this for its default styling (internal
+arc-following, leaf radial), but does not expose all five modes.
+}}
 
 \item{dismiss_overlaps}{(logical, default \code{TRUE}) Static sunburst only.
-Radially-oriented labels (leaf callouts in \code{"auto"}, every radial label in
-\code{"radial"}/\code{"mixed"}, and the radial fallback in \code{"adaptive"}) are
-anchored at a single point and can visually crowd a neighbour when their
-wedges are angularly close, even though each individually "fits" its own
-wedge. When \code{TRUE}, such collisions are detected and the lower-value
-label of the pair is replaced by the \code{label_fallback} marker instead of
-being drawn overlapping. Has no effect on purely tangential labels, which
-are already confined to their own arc. Set to \code{FALSE} to restore the
-unfiltered placement.}
+Radially-oriented labels are anchored at a single point and can visually
+crowd a neighbour when their wedges are angularly close, even though each
+individually "fits" its own wedge. When \code{TRUE}, such collisions are
+detected and the lower-value label of the pair is replaced by the
+\code{label_fallback} marker instead of being drawn overlapping. Has no effect
+on purely tangential labels, which are already confined to their own arc.
+Set to \code{FALSE} to restore the unfiltered placement.}
 
 \item{label_fallback}{(character, default \code{"dot"}) Static sunburst only.
 What to draw instead of a label that has no room, or that
 \code{dismiss_overlaps} removed for overlapping a neighbour. \code{"dot"} draws the
 single glyph in \code{fallback_symbol}. \code{"initials"} draws the first
 \code{fallback_nchar} characters of the section name. \code{"none"} draws nothing.
-Leaf labels dismissed while using the \code{"auto"} external-callout style keep
-a short leader line stub pointing to their marker.}
+\code{"legend"} tries a unique \code{fallback_nchar}-letter code derived from the
+name first (disambiguated on collision), then the shortest unused number
+if even the code does not fit, then nothing; every assigned code/number
+is listed in an on-canvas legend (\code{"code -- name"}, bottom-left corner).
+With many small sections the legend can be long enough to extend past a
+typical device size -- increase the plot height when using
+\code{label_fallback = "legend"} on high-diversity data. Leaf labels replaced
+by a marker keep a short leader line stub pointing to it whenever
+\code{leaf_label_padding} places leaf labels with a real gap past the rim.}
 
 \item{fallback_symbol}{(character, default \code{"·"} i.e. a middle dot)
 Static sunburst only. The glyph drawn when \code{label_fallback = "dot"}; pass
@@ -193,7 +202,18 @@ e.g. \code{"*"} or \code{"+"} for a different marker.}
 
 \item{fallback_nchar}{(integer, default \code{3}) Static sunburst only. Number
 of leading characters of the section name shown when
-\code{label_fallback = "initials"}.}
+\code{label_fallback = "initials"}; length of the derived code when
+\code{label_fallback = "legend"}.}
+
+\item{leaf_label_padding}{(numeric, default \code{0.08}) Static sunburst only.
+How far past a leaf wedge's outer border its radial label starts, in the
+same depth units as one ring. \code{0} places the label right at the border;
+negative values pull it back inside the wedge (recreating the pre-session
+"inside the rim" look); larger positive values push it further out and
+draw a connecting leader line. Ignored for tangential leaf labels (which
+stay centred inside their own coloured band) and for
+\code{label_orientation = "tangential"}, which never places leaf labels
+outside the rim.}
 
 \item{show_search}{(logical, default \code{FALSE}) Interactive widget only.
 Deprecated: the search box is now always shown in the widget toolbar (for
@@ -216,8 +236,10 @@ via \code{\link[htmlwidgets:saveWidget]{htmlwidgets::saveWidget()}}. The widget 
 Ignored when \code{interactive = FALSE}.}
 
 \item{width, height}{(numeric, default \code{NULL}) Widget dimensions in pixels.
-When \code{NULL}, the widget fills its container (RStudio viewer / Shiny).
-Ignored when \code{interactive = FALSE}.}
+When \code{width} is \code{NULL}, the widget fills its container (RStudio viewer /
+Shiny); when \code{height} is \code{NULL}, it defaults to \code{900} -- the widget is
+meant to be viewed full-screen, and a shorter default leaves too little
+room for the dense label layout. Ignored when \code{interactive = FALSE}.}
 }
 \value{
 When \code{interactive = TRUE}, an \code{htmlwidget} object (invisibly if
@@ -290,14 +312,25 @@ krona_like_pq(data_fungi_mini, interactive = FALSE, min_prop = 0.02)
 # Collapse single-child intermediate levels
 krona_like_pq(data_fungi_mini, interactive = FALSE, collapse_single = TRUE)
 
-# Internal labels circular, leaf labels radial (never outside the rim)
+# Internal labels circular, leaf labels radial (outside the rim)
 krona_like_pq(data_fungi_mini, interactive = FALSE, label_orientation = "mixed")
 
-# Circular where it fits, radial otherwise, for every label
+# Radial where it fits, circular otherwise, for every label
 krona_like_pq(data_fungi_mini, interactive = FALSE, label_orientation = "adaptive")
 
 # Show the first 3 letters instead of a dot for labels with no room
 krona_like_pq(data_fungi_mini, interactive = FALSE, label_fallback = "initials")
+
+# Unique code/number ladder with an on-canvas legend for labels with no room
+krona_like_pq(
+  data_fungi_mini,
+  interactive = FALSE,
+  label_orientation = "adaptive",
+  label_fallback = "legend"
+)
+
+# Pull leaf labels back inside the rim instead of the outside-border default
+krona_like_pq(data_fungi_mini, interactive = FALSE, leaf_label_padding = -0.5)
 
 # Add a faint dotted motif on alternate sections (needs ggpattern)
 if (requireNamespace("ggpattern", quietly = TRUE)) {
