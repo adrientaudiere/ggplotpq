@@ -28,6 +28,10 @@
 #'   parent. Use `NA` for roots. Alternatively, a data.frame whose first
 #'   column holds object names and second column holds parent names (`NA`
 #'   for roots). When `NULL`, no tree or diff columns are produced.
+#' @param clean_parent (logical, default: TRUE) If `TRUE` and `parent` is
+#'   supplied, rows of `track_df` whose name has no entry in `parent` (i.e.
+#'   is not one of `names(parent)`) are dropped before building the tree.
+#'   Set to `FALSE` to keep such rows (they are then treated as roots).
 #' @param bar_color (character, default: "lightblue") Color used for the
 #'   proportional bars on `nb_sequences`, `nb_clusters`, and `nb_samples`.
 #' @param tile_low,tile_high (character, default: "white"/"steelblue")
@@ -91,6 +95,7 @@
 track_wkflow_formattable <- function(
   track_df,
   parent = NULL,
+  clean_parent = TRUE,
   bar_color = "lightblue",
   tile_low = "#c0dcf5",
   tile_high = "#4882b4",
@@ -152,6 +157,11 @@ track_wkflow_formattable <- function(
         as.character(parent[[2]]),
         as.character(parent[[1]])
       )
+    }
+    if (clean_parent) {
+      keep <- obj_names %in% names(parent)
+      obj_names <- obj_names[keep]
+      track_df <- track_df[keep, , drop = FALSE]
     }
     parent <- parent[obj_names]
   }

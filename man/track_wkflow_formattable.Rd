@@ -7,6 +7,7 @@
 track_wkflow_formattable(
   track_df,
   parent = NULL,
+  clean_parent = TRUE,
   bar_color = "lightblue",
   tile_low = "#c0dcf5",
   tile_high = "#4882b4",
@@ -31,6 +32,11 @@ named character vector mapping each row name to the row name of its
 parent. Use \code{NA} for roots. Alternatively, a data.frame whose first
 column holds object names and second column holds parent names (\code{NA}
 for roots). When \code{NULL}, no tree or diff columns are produced.}
+
+\item{clean_parent}{(logical, default: TRUE) If \code{TRUE} and \code{parent} is
+supplied, rows of \code{track_df} whose name has no entry in \code{parent} (i.e.
+is not one of \code{names(parent)}) are dropped before building the tree.
+Set to \code{FALSE} to keep such rows (they are then treated as roots).}
 
 \item{bar_color}{(character, default: "lightblue") Color used for the
 proportional bars on \code{nb_sequences}, \code{nb_clusters}, and \code{nb_samples}.}

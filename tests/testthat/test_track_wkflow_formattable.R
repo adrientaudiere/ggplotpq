@@ -160,6 +160,40 @@ test_that("track_wkflow_formattable round = NULL disables rounding", {
   expect_equal(out$prop_na_Genus[[1]], 0.123456)
 })
 
+test_that("track_wkflow_formattable clean_parent drops orphan rows", {
+  skip_if_not_installed("formattable")
+  skip_if_not_installed("htmltools")
+  track_df <- data.frame(
+    nb_sequences = c(10000, 8000, 5000),
+    nb_samples = c(10, 10, 10),
+    row.names = c("raw", "filt", "orphan")
+  )
+  parent <- c(raw = NA, filt = "raw")
+  ft <- track_wkflow_formattable(track_df, parent = parent)
+  out <- as.data.frame(ft)
+  expect_equal(nrow(out), 2)
+  expect_false(any(grepl("orphan", out$Object)))
+})
+
+test_that("track_wkflow_formattable clean_parent = FALSE keeps orphans", {
+  skip_if_not_installed("formattable")
+  skip_if_not_installed("htmltools")
+  track_df <- data.frame(
+    nb_sequences = c(10000, 8000, 5000),
+    nb_samples = c(10, 10, 10),
+    row.names = c("raw", "filt", "orphan")
+  )
+  parent <- c(raw = NA, filt = "raw")
+  ft <- track_wkflow_formattable(
+    track_df,
+    parent = parent,
+    clean_parent = FALSE
+  )
+  out <- as.data.frame(ft)
+  expect_equal(nrow(out), 3)
+  expect_true(any(grepl("orphan", out$Object)))
+})
+
 test_that("track_wkflow_formattable reorders prop_na after seq and genetic_diversity", {
   skip_if_not_installed("formattable")
   skip_if_not_installed("htmltools")

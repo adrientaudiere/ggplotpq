@@ -284,7 +284,6 @@ works on all platforms because it bundles D3.js locally.
 }
 \examples{
 \donttest{
-data(data_fungi_mini, package = "MiscMetabar")
 pq5 <- phyloseq::prune_samples(
   phyloseq::sample_names(data_fungi_mini)[1:5],
   data_fungi_mini
@@ -295,8 +294,6 @@ krona_like_pq(pq5, interactive = FALSE)
 }
 
 \dontrun{
-data(data_fungi_mini, package = "MiscMetabar")
-
 # Static treemap
 krona_like_pq(data_fungi_mini, layout = "treemap", interactive = FALSE)
 
@@ -342,7 +339,7 @@ if (requireNamespace("scales", quietly = TRUE)) {
   pq_num <- data_fungi_mini
   phyloseq::tax_table(pq_num) <- cbind(
     phyloseq::tax_table(pq_num),
-    conf_score = as.character(stats::runif(phyloseq::ntaxa(pq_num)))
+    conf_score = taxa_sums(pq_num)
   )
   krona_like_pq(
     pq_num,
