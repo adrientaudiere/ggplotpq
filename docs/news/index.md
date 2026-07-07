@@ -2,6 +2,16 @@
 
 ## ggplotpq 0.1.0 (Development version)
 
+- [`plot_tax_count_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_count_pq.md),
+  [`ternary_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/ternary_pq.md)
+  and
+  [`ternary_biomarker_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/ternary_biomarker_pq.md)
+  now validate their grouping column through
+  [`MiscMetabar::verify_fact_pq()`](https://adrientaudiere.github.io/MiscMetabar/reference/verify_fact_pq.html),
+  raising a clear error listing the available `sample_data` columns when
+  the requested `fact` column is absent;
+  [`plot_tax_count_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_count_pq.md)
+  previously accessed the column without checking it existed.
 - [`track_wkflow_formattable()`](https://adrientaudiere.github.io/ggplotpq/reference/track_wkflow_formattable.md)
   gains `clean_parent` (default `TRUE`), which drops rows of `track_df`
   that have no entry in `parent` before building the tree instead of
@@ -159,15 +169,14 @@
   gains `check_nestedness` (default `TRUE`) to toggle the nestedness
   validation warning, `collapse_single` to remove uninformative
   single-child intermediate ranks, `color_as_numeric` to map any numeric
-  [`tax_table()`](https://rdrr.io/pkg/phyloseq/man/tax_table-methods.html)
-  column to a viridis gradient, `label_pct` (`"none"` / `"total"` /
-  `"parent"`) to append proportions to section labels, `min_prop` to
-  merge low-abundance siblings into a crosshatch-marked `"n more"`
-  aggregate, `show_center_count` (default `TRUE`) to display the total
-  count in the sunburst centre (and the focused node count on zoom),
-  `show_search` to add a live search box to the interactive widget, and
-  `show_info_panel` to add a hover info panel showing count and
-  percentages; also adds nestedness validation (`cli_warn` on
+  `tax_table()` column to a viridis gradient, `label_pct` (`"none"` /
+  `"total"` / `"parent"`) to append proportions to section labels,
+  `min_prop` to merge low-abundance siblings into a crosshatch-marked
+  `"n more"` aggregate, `show_center_count` (default `TRUE`) to display
+  the total count in the sunburst centre (and the focused node count on
+  zoom), `show_search` to add a live search box to the interactive
+  widget, and `show_info_panel` to add a hover info panel showing count
+  and percentages; also adds nestedness validation (`cli_warn` on
   non-strictly-nested `tax_table`), middle-ellipsis label truncation,
   and radially-oriented leaf-rank labels.
 - [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
@@ -275,15 +284,33 @@
 - [`plot_tax_table_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_table_pq.md)
   draws a compact distribution overview of `tax_table` columns (via
   [`tidypq::tax_table_to_df()`](https://adrientaudiere.github.io/tidypq/reference/tax_table_to_df.html))
-  as one horizontal row per column, with tidyselect column selection
-  (including regex helpers such as
-  [`dplyr::matches()`](https://tidyselect.r-lib.org/reference/starts_with.html));
+  as one horizontal row per `ranks` column (defaulting to
+  `phyloseq::rank_names(physeq)`); `na_equivalent` (default
+  `c("-", "NA_NA")`) is first converted to true `NA`, and columns that
+  end up entirely `NA` are discarded with a message by default
+  (`discard_full_NA_column = TRUE`) or, when set to `FALSE`, drawn as a
+  single dark grey `"NA"` row instead (including a numeric column that
+  is entirely `NA`, which cannot be shown as a raincloud); other
   factor/character/logical columns become a single stacked bar (dark
   grey for `NA`, colored zones sized by proportion, categories below
-  `threshold` in white and unlabeled, labels sized to fit via
-  `ggfittext`), numeric columns become a thin horizontal raincloud
-  (violin + boxplot + jitter); rows are stacked into one `patchwork`
-  figure by default, or returned as a named list via `combine = FALSE`.
+  `threshold` shown in grey with a stripe motif via `ggpattern` and
+  unlabeled, labels sized to fit via `ggfittext`); a column is treated
+  as boolean-like as soon as one value reads `"true"` or `"false"`
+  (case-insensitive), giving it a fixed color scheme shared across every
+  such column (olive green for true, brick red for false, a blue
+  gradient for any other value); the last such bar row in each figure
+  carries a shared `"Proportion"` x-axis (ticks at 0, 0.25, 0.5, 0.75,
+  1), with other bar rows’ axes hidden to avoid repeating it; numeric
+  columns become a thin horizontal raincloud (violin + boxplot + jitter)
+  always annotated with a dark, high-contrast `"n = XX"` badge in the
+  top-right corner, extended to `"n = XX (YY% NA)"` when there is at
+  least one `NA`; rows are stacked into one `patchwork` figure by
+  default, or returned as a named list of one `ggplot` per column via
+  `combine = FALSE`; when more than `max_combined_ranks` (default 25)
+  columns are selected with `combine = TRUE`, `ranks` is instead split
+  into consecutive chunks of at most `max_combined_ranks` columns (with
+  a message), each combined into its own `patchwork` figure, so a named
+  list of figures is returned instead of one overly dense plot.
 - [`plot_taxa_heatmap_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_taxa_heatmap_pq.md)
   draws a heatmap of the `n_top` most abundant taxa across samples, with
   optional log10 transform and custom fill scale; aggregated by the

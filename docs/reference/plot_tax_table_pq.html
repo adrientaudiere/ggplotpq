@@ -8,9 +8,20 @@ many columns can be scanned at a glance. Factor/character/logical columns
 become a single stacked bar spanning the full row: each category is a
 colored zone sized by its proportion of the total, NA is a dark grey
 zone, and categories that individually represent less than threshold of
-the total are drawn in white and left unlabeled (only zones at or above
-threshold get a small text label). Numeric columns become a thin
-horizontal raincloud (violin + boxplot + jittered points)."><meta property="og:description" content="
+the total are drawn in grey with a stripe motif (via ggpattern, when
+installed) and left unlabeled (only zones at or above threshold get a
+small text label). A column is treated as boolean-like as soon as one of
+its values reads &quot;true&quot; or &quot;false&quot; (case-insensitive, so logical
+columns and mixes like c(TRUE, FALSE, &quot;uncertain&quot;) both qualify): the
+color scheme is then fixed across every such column (olive green for
+true, brick red for false, a blue gradient for any other value), instead
+of the arbitrary categorical palette used for other factor columns.
+The last such bar row carries a shared &quot;Proportion&quot; x-axis (ticks at
+0, 0.25, 0.5, 0.75, 1) for the whole group; other bar rows have theirs
+hidden to avoid repeating it. Numeric columns become a thin horizontal
+raincloud (violin + boxplot + jittered points) with the number of
+non-NA values annotated in the top-right corner (and the proportion
+of NA values too, when there is at least one NA)."><meta property="og:description" content="
 
 
 Build one compact horizontal row per column of a phyloseq's tax_table
@@ -19,9 +30,20 @@ many columns can be scanned at a glance. Factor/character/logical columns
 become a single stacked bar spanning the full row: each category is a
 colored zone sized by its proportion of the total, NA is a dark grey
 zone, and categories that individually represent less than threshold of
-the total are drawn in white and left unlabeled (only zones at or above
-threshold get a small text label). Numeric columns become a thin
-horizontal raincloud (violin + boxplot + jittered points)."><meta property="og:image" content="https://adrientaudiere.github.io/ggplotpq/logo.svg"></head><body>
+the total are drawn in grey with a stripe motif (via ggpattern, when
+installed) and left unlabeled (only zones at or above threshold get a
+small text label). A column is treated as boolean-like as soon as one of
+its values reads &quot;true&quot; or &quot;false&quot; (case-insensitive, so logical
+columns and mixes like c(TRUE, FALSE, &quot;uncertain&quot;) both qualify): the
+color scheme is then fixed across every such column (olive green for
+true, brick red for false, a blue gradient for any other value), instead
+of the arbitrary categorical palette used for other factor columns.
+The last such bar row carries a shared &quot;Proportion&quot; x-axis (ticks at
+0, 0.25, 0.5, 0.75, 1) for the whole group; other bar rows have theirs
+hidden to avoid repeating it. Numeric columns become a thin horizontal
+raincloud (violin + boxplot + jittered points) with the number of
+non-NA values annotated in the top-right corner (and the proportion
+of NA values too, when there is at least one NA)."><meta property="og:image" content="https://adrientaudiere.github.io/ggplotpq/logo.svg"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -63,14 +85,33 @@ many columns can be scanned at a glance. Factor/character/logical columns
 become a single stacked bar spanning the full row: each category is a
 colored zone sized by its proportion of the total, <code>NA</code> is a dark grey
 zone, and categories that individually represent less than <code>threshold</code> of
-the total are drawn in white and left unlabeled (only zones at or above
-<code>threshold</code> get a small text label). Numeric columns become a thin
-horizontal raincloud (violin + boxplot + jittered points).</p>
+the total are drawn in grey with a stripe motif (via <code>ggpattern</code>, when
+installed) and left unlabeled (only zones at or above <code>threshold</code> get a
+small text label). A column is treated as boolean-like as soon as one of
+its values reads <code>"true"</code> or <code>"false"</code> (case-insensitive, so logical
+columns and mixes like <code>c(TRUE, FALSE, "uncertain")</code> both qualify): the
+color scheme is then fixed across every such column (olive green for
+true, brick red for false, a blue gradient for any other value), instead
+of the arbitrary categorical palette used for other factor columns.
+The last such bar row carries a shared <code>"Proportion"</code> x-axis (ticks at
+0, 0.25, 0.5, 0.75, 1) for the whole group; other bar rows have theirs
+hidden to avoid repeating it. Numeric columns become a thin horizontal
+raincloud (violin + boxplot + jittered points) with the number of
+non-<code>NA</code> values annotated in the top-right corner (and the proportion
+of <code>NA</code> values too, when there is at least one <code>NA</code>).</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">plot_tax_table_pq</span><span class="op">(</span><span class="va">physeq</span>, <span class="va">...</span>, threshold <span class="op">=</span> <span class="fl">0.02</span>, combine <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">plot_tax_table_pq</span><span class="op">(</span></span>
+<span>  <span class="va">physeq</span>,</span>
+<span>  ranks <span class="op">=</span> <span class="fu">phyloseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/phyloseq/man/rank_names.html" class="external-link">rank_names</a></span><span class="op">(</span><span class="va">physeq</span><span class="op">)</span>,</span>
+<span>  na_equivalent <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"-"</span>, <span class="st">"NA_NA"</span><span class="op">)</span>,</span>
+<span>  threshold <span class="op">=</span> <span class="fl">0.02</span>,</span>
+<span>  discard_full_NA_column <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  combine <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  max_combined_ranks <span class="op">=</span> <span class="fl">25</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -82,29 +123,58 @@ horizontal raincloud (violin + boxplot + jittered points).</p>
 <a href="https://rdrr.io/pkg/phyloseq/man/taxonomyTable-class.html" class="external-link">phyloseq::taxonomyTable</a> object.</p></dd>
 
 
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p><tidy-select> Columns of the <code>tax_table</code> to plot. Supports
-tidyselect helpers, including regex-based ones such as
-<code>dplyr::matches("^Guild")</code>. Defaults to every column when omitted.</tidy-select></p></dd>
+<dt id="arg-ranks">ranks<a class="anchor" aria-label="anchor" href="#arg-ranks"></a></dt>
+<dd><p>(character, default <code>phyloseq::rank_names(physeq)</code>) Names of
+<code>tax_table</code> columns to plot.</p></dd>
+
+
+<dt id="arg-na-equivalent">na_equivalent<a class="anchor" aria-label="anchor" href="#arg-na-equivalent"></a></dt>
+<dd><p>(character vector or NULL, default <code>"-"</code>) Values
+found in character/factor columns that are treated as <code>NA</code> before
+summarizing (e.g. placeholder codes such as <code>"-"</code>). Set to <code>NULL</code> to
+disable.</p></dd>
 
 
 <dt id="arg-threshold">threshold<a class="anchor" aria-label="anchor" href="#arg-threshold"></a></dt>
 <dd><p>(numeric, default 0.02) For factor/character/logical
 columns, categories whose proportion of the total is below <code>threshold</code>
-are drawn in white and left unlabeled; <code>NA</code> is exempt (always dark
-grey, always labeled when non-zero).</p></dd>
+are drawn in grey (with a stripe motif) and left unlabeled; <code>NA</code> is
+exempt (always dark grey, always labeled when non-zero), and so are
+<code>TRUE</code>/<code>FALSE</code> values in boolean-like columns.</p></dd>
+
+
+<dt id="arg-discard-full-na-column">discard_full_NA_column<a class="anchor" aria-label="anchor" href="#arg-discard-full-na-column"></a></dt>
+<dd><p>(logical, default TRUE) If TRUE, columns
+that are entirely <code>NA</code> (after <code>na_equivalent</code> conversion) are dropped
+with a message. If FALSE, they are kept and drawn as a single dark
+grey <code>"NA"</code> row (a numeric column that is entirely <code>NA</code> is drawn this
+way too, since a raincloud needs at least one value).</p></dd>
 
 
 <dt id="arg-combine">combine<a class="anchor" aria-label="anchor" href="#arg-combine"></a></dt>
 <dd><p>(logical, default TRUE) If TRUE, stack the per-column rows
-into a single <a href="https://patchwork.data-imaginist.com/reference/patchwork-package.html" class="external-link">patchwork::patchwork</a> figure. If FALSE, return a named
-list of <a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot2::ggplot</a> objects (one per column).</p></dd>
+into a single <a href="https://patchwork.data-imaginist.com/reference/patchwork-package.html" class="external-link">patchwork::patchwork</a> figure (or several, see
+<code>max_combined_ranks</code>). If FALSE, return a named list of
+<a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot2::ggplot</a> objects (one per column).</p></dd>
+
+
+<dt id="arg-max-combined-ranks">max_combined_ranks<a class="anchor" aria-label="anchor" href="#arg-max-combined-ranks"></a></dt>
+<dd><p>(integer, default 25) Maximum number of rows
+per combined figure. If <code>combine = TRUE</code> and more than
+<code>max_combined_ranks</code> columns are selected, <code>ranks</code> is split into
+consecutive chunks of at most <code>max_combined_ranks</code> columns (with a
+message), each combined into its own <a href="https://patchwork.data-imaginist.com/reference/patchwork-package.html" class="external-link">patchwork::patchwork</a> figure, so
+a named list of figures is returned instead of a single, too-dense one.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <a href="https://patchwork.data-imaginist.com/reference/patchwork-package.html" class="external-link">patchwork::patchwork</a> object (default), or a named list of
-<a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot2::ggplot</a> objects when <code>combine = FALSE</code>.</p>
+    <p>A <a href="https://patchwork.data-imaginist.com/reference/patchwork-package.html" class="external-link">patchwork::patchwork</a> object when <code>combine = TRUE</code> and
+<code>ranks</code> fits within <code>max_combined_ranks</code>; otherwise a named list, of
+<a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot2::ggplot</a> objects (one per column) when <code>combine = FALSE</code>, or
+of <a href="https://patchwork.data-imaginist.com/reference/patchwork-package.html" class="external-link">patchwork::patchwork</a> objects (one per chunk of at most
+<code>max_combined_ranks</code> columns) when <code>combine = TRUE</code> with more than
+<code>max_combined_ranks</code> columns selected.</p>
     </div>
     <div class="section level2">
     <h2 id="author">Author<a class="anchor" aria-label="anchor" href="#author"></a></h2>
@@ -117,15 +187,15 @@ list of <a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="ext
 <span class="r-in"><span><span class="fu">plot_tax_table_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="plot_tax_table_pq-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Restrict to a subset of columns, mixing exact names and tidyselect</span></span></span>
-<span class="r-in"><span><span class="fu">plot_tax_table_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, <span class="va">Phylum</span>, <span class="va">Class</span>, <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://tidyselect.r-lib.org/reference/starts_with.html" class="external-link">matches</a></span><span class="op">(</span><span class="st">"^Guild"</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># Restrict to a subset of columns</span></span></span>
+<span class="r-in"><span><span class="fu">plot_tax_table_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, ranks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Class"</span>, <span class="st">"Guild"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="plot_tax_table_pq-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">data_fungi_mini</span> <span class="op">&lt;-</span> <span class="fu">tidypq</span><span class="fu">::</span><span class="fu"><a href="https://adrientaudiere.github.io/tidypq/reference/mutate_taxa_pq.html" class="external-link">mutate_taxa_pq</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">data_fungi_mini</span>,</span></span>
 <span class="r-in"><span>  Mol_Abundance <span class="op">=</span> <span class="fu">phyloseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/phyloseq/man/taxa_sums.html" class="external-link">taxa_sums</a></span><span class="op">(</span><span class="va">.</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu">plot_tax_table_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, <span class="va">Phylum</span>, <span class="va">Mol_Abundance</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">plot_tax_table_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, ranks <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Class"</span>, <span class="st">"Mol_Abundance"</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-plt img"><img src="plot_tax_table_pq-3.png" alt="" width="700" height="433"></span>
 </code></pre></div>
     </div>

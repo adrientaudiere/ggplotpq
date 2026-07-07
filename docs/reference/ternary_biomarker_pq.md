@@ -14,7 +14,7 @@ biomarker taxa elsewhere (e.g. a LefSe analysis, planned for the
 `netaipq` package) and pass the resulting taxa names to
 `biomarker_taxa`. When `biomarker_taxa` is `NULL`, every taxon is shown.
 The original published figure this reproduces colours ZOTUs by the
-treatment (control / manure / frass) in which they are enriched (Wang et
+treatment (control / manure / frass) in which they are enriched (Du et
 al. 2023,
 [doi:10.1007/s42832-023-0196-0](https://doi.org/10.1007/s42832-023-0196-0)
 ).
@@ -93,7 +93,7 @@ object.
 
 ## References
 
-Wang et al. (2023)
+Du et al. (2023)
 [doi:10.1007/s42832-023-0196-0](https://doi.org/10.1007/s42832-023-0196-0)
 .
 
