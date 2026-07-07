@@ -1,3 +1,5 @@
+# ggplotpq 0.2.0 (Development version)
+
 # ggplotpq 0.1.0* `plot_tax_count_pq()`, `ternary_pq()` and `ternary_biomarker_pq()` now validate their grouping column through `MiscMetabar::verify_fact_pq()`, raising a clear error listing the available `sample_data` columns when the requested `fact` column is absent; `plot_tax_count_pq()` previously accessed the column without checking it existed.
 * `track_wkflow_formattable()` gains `clean_parent` (default `TRUE`), which drops rows of `track_df` that have no entry in `parent` before building the tree instead of rendering them as unexplained roots; set to `FALSE` to keep the previous behavior.
 * `membership_from_list()` (internal) converts a named list of member vectors into a binary membership data frame (one row per unique member, one logical column per set), the wide format required by `ComplexUpset::upset()` and similar venn/upset tools; avoids a hard dependency on `UpSetR::fromList()`.
