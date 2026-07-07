@@ -19,7 +19,7 @@ utils::globalVariables(c("sum_abund", "enriched", "taxon"))
 #' LefSe analysis, planned for the `netaipq` package) and pass the resulting
 #' taxa names to `biomarker_taxa`. When `biomarker_taxa` is `NULL`, every taxon
 #' is shown. The original published figure this reproduces colours ZOTUs by the
-#' treatment (control / manure / frass) in which they are enriched (Wang et al.
+#' treatment (control / manure / frass) in which they are enriched (Du et al.
 #' 2023, \doi{10.1007/s42832-023-0196-0}).
 #'
 #' @param physeq (required) A [phyloseq::phyloseq-class] object.
@@ -43,7 +43,7 @@ utils::globalVariables(c("sum_abund", "enriched", "taxon"))
 #'
 #' @return A `ggtern`/[ggplot2::ggplot] object.
 #' @author Adrien Taudière
-#' @references Wang et al. (2023) \doi{10.1007/s42832-023-0196-0}.
+#' @references Du et al. (2023) \doi{10.1007/s42832-023-0196-0}.
 #' @seealso [ternary_pq()] for a base-ggplot2 ternary/diamond of all taxa
 #'   (no \pkg{ggtern} dependency).
 #' @export
@@ -134,12 +134,8 @@ ternary_biomarker_pq <- function(
 ) {
   # -- Resolve grouping factor ------------------------------------------------
   if (is.character(fact) && length(fact) == 1) {
+    MiscMetabar::verify_fact_pq(physeq, fact = fact)
     sd <- as.data.frame(phyloseq::sample_data(physeq))
-    if (!fact %in% colnames(sd)) {
-      cli::cli_abort(
-        "{.arg fact} ({.val {fact}}) not found in {.code sample_data(physeq)}."
-      )
-    }
     group <- factor(sd[[fact]])
   } else {
     group <- factor(fact)

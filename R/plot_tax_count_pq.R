@@ -73,6 +73,7 @@ plot_tax_count_pq <- function(
   if (is.null(fact)) {
     cli::cli_abort("{.arg fact} is required.")
   }
+  MiscMetabar::verify_fact_pq(physeq, fact = fact)
 
   if (na_remove) {
     new_physeq <- MiscMetabar::subset_samples_pq(

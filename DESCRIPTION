@@ -33,6 +33,7 @@ Suggests:
     earthtones,
     formattable,
     ggbreak,
+    ggfittext,
     ggforce,
     ggpattern,
     ggtern,

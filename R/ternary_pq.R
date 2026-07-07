@@ -26,12 +26,8 @@ utils::globalVariables(c(
 .ternary_norm <- function(physeq, group, level_order, raw, normalize_groups) {
   if (!is.null(phyloseq::sample_data(physeq, FALSE))) {
     if (is.character(group) && length(group) == 1) {
+      MiscMetabar::verify_fact_pq(physeq, fact = group)
       sd <- data.frame(phyloseq::sample_data(physeq))
-      if (!group %in% colnames(sd)) {
-        cli::cli_abort(
-          "{.arg group} ({.val {group}}) not found in sample_data."
-        )
-      }
       group <- factor(sd[[group]])
     }
   }
