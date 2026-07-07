@@ -55,7 +55,12 @@ krona_like_pq(
   collapse_single = FALSE,
   show_collapsed_path = FALSE,
   grey_terms = c(NA_character_, "unassigned", "unknown"),
-  label_orientation = c("auto", "tangential", "radial"),
+  label_orientation = c("auto", "tangential", "radial", "mixed", "adaptive"),
+  dismiss_overlaps = TRUE,
+  label_fallback = c("dot", "initials", "none", "legend"),
+  fallback_symbol = "·",
+  fallback_nchar = 3,
+  leaf_label_padding = 0.08,
   show_search = FALSE,
   show_info_panel = FALSE,
   check_nestedness = TRUE,
@@ -224,17 +229,83 @@ krona_like_pq(
 - label_orientation:
 
   (character, default `"auto"`) Static sunburst only. Controls how
-  section labels are placed. `"auto"` (default): **internal** labels are
-  **radial** (running along the radius), centred on their wedge and
-  reading outward from the band inner edge, shortened to the radial room
-  so they stay within ~their ring; **leaf** labels are placed **outside
-  the rim**, radial and reading outward, each linked to its wedge by a
-  short grey leader line. `"radial"` is the same but keeps the leaf
-  labels inside the circle (the original Krona style). `"tangential"`
-  runs every label along its arc, centred in the band, shown only when
-  the name fits. In all modes text is normalised to never appear
-  upside-down, merged fill chains are labelled once, and wedges with no
-  room get a small dot.
+  section labels are placed.
+
+  - `"auto"` / `"radial"`: **internal** labels run **along their own
+    ring band** (arc-following, never upside-down), centred; **leaf**
+    labels are **radial**, a spoke reading straight outward from the
+    centre, placed outside the coloured arc by `leaf_label_padding`
+    (`"radial"` differs from `"auto"` only in historical naming – both
+    place leaf labels outside the rim by default now).
+
+  - `"tangential"`: every label (internal and leaf) runs along its arc,
+    centred in the band, shown only when the name fits.
+
+  - `"mixed"`: **internal** labels are tangential (circular); **leaf**
+    labels are radial, outside the rim like above.
+
+  - `"adaptive"`: every label (internal and leaf) tries the radial
+    placement first and falls back to tangential only when radial does
+    not fit the arc. In every mode, a label with nowhere to go gets the
+    `label_fallback` marker; see `dismiss_overlaps` for thinning crowded
+    radial labels and `leaf_label_padding` for how far outside the rim
+    leaf labels sit. The interactive widget mirrors this for its default
+    styling (internal arc-following, leaf radial), but does not expose
+    all five modes.
+
+- dismiss_overlaps:
+
+  (logical, default `TRUE`) Static sunburst only. Radially-oriented
+  labels are anchored at a single point and can visually crowd a
+  neighbour when their wedges are angularly close, even though each
+  individually "fits" its own wedge. When `TRUE`, such collisions are
+  detected and the lower-value label of the pair is replaced by the
+  `label_fallback` marker instead of being drawn overlapping. Has no
+  effect on purely tangential labels, which are already confined to
+  their own arc. Set to `FALSE` to restore the unfiltered placement.
+
+- label_fallback:
+
+  (character, default `"dot"`) Static sunburst only. What to draw
+  instead of a label that has no room, or that `dismiss_overlaps`
+  removed for overlapping a neighbour. `"dot"` draws the single glyph in
+  `fallback_symbol`. `"initials"` draws the first `fallback_nchar`
+  characters of the section name. `"none"` draws nothing. `"legend"`
+  tries a unique `fallback_nchar`-letter code derived from the name
+  first (disambiguated on collision), then the shortest unused number if
+  even the code does not fit, then nothing; every assigned code/number
+  is listed in an on-canvas legend (`"code -- name"`, bottom-left
+  corner). With many small sections the legend can be long enough to
+  extend past a typical device size – increase the plot height when
+  using `label_fallback = "legend"` on high-diversity data. Leaf labels
+  replaced by a marker keep a short leader line stub pointing to it
+  whenever `leaf_label_padding` places leaf labels with a real gap past
+  the rim.
+
+- fallback_symbol:
+
+  (character, default `"·"` i.e. a middle dot) Static sunburst only. The
+  glyph drawn when `label_fallback = "dot"`; pass e.g. `"*"` or `"+"`
+  for a different marker.
+
+- fallback_nchar:
+
+  (integer, default `3`) Static sunburst only. Number of leading
+  characters of the section name shown when
+  `label_fallback = "initials"`; length of the derived code when
+  `label_fallback = "legend"`.
+
+- leaf_label_padding:
+
+  (numeric, default `0.08`) Static sunburst only. How far past a leaf
+  wedge's outer border its radial label starts, in the same depth units
+  as one ring. `0` places the label right at the border; negative values
+  pull it back inside the wedge (recreating the pre-session "inside the
+  rim" look); larger positive values push it further out and draw a
+  connecting leader line. Ignored for tangential leaf labels (which stay
+  centred inside their own coloured band) and for
+  `label_orientation = "tangential"`, which never places leaf labels
+  outside the rim.
 
 - show_search:
 
@@ -268,9 +339,11 @@ krona_like_pq(
 
 - width, height:
 
-  (numeric, default `NULL`) Widget dimensions in pixels. When `NULL`,
-  the widget fills its container (RStudio viewer / Shiny). Ignored when
-  `interactive = FALSE`.
+  (numeric, default `NULL`) Widget dimensions in pixels. When `width` is
+  `NULL`, the widget fills its container (RStudio viewer / Shiny); when
+  `height` is `NULL`, it defaults to `900` – the widget is meant to be
+  viewed full-screen, and a shorter default leaves too little room for
+  the dense label layout. Ignored when `interactive = FALSE`.
 
 ## Value
 
@@ -293,7 +366,6 @@ Adrien Taudière
 
 ``` r
 # \donttest{
-data(data_fungi_mini, package = "MiscMetabar")
 pq5 <- phyloseq::prune_samples(
   phyloseq::sample_names(data_fungi_mini)[1:5],
   data_fungi_mini
@@ -306,8 +378,6 @@ krona_like_pq(pq5, interactive = FALSE)
 # }
 
 if (FALSE) { # \dontrun{
-data(data_fungi_mini, package = "MiscMetabar")
-
 # Static treemap
 krona_like_pq(data_fungi_mini, layout = "treemap", interactive = FALSE)
 
@@ -323,6 +393,26 @@ krona_like_pq(data_fungi_mini, interactive = FALSE, min_prop = 0.02)
 # Collapse single-child intermediate levels
 krona_like_pq(data_fungi_mini, interactive = FALSE, collapse_single = TRUE)
 
+# Internal labels circular, leaf labels radial (outside the rim)
+krona_like_pq(data_fungi_mini, interactive = FALSE, label_orientation = "mixed")
+
+# Radial where it fits, circular otherwise, for every label
+krona_like_pq(data_fungi_mini, interactive = FALSE, label_orientation = "adaptive")
+
+# Show the first 3 letters instead of a dot for labels with no room
+krona_like_pq(data_fungi_mini, interactive = FALSE, label_fallback = "initials")
+
+# Unique code/number ladder with an on-canvas legend for labels with no room
+krona_like_pq(
+  data_fungi_mini,
+  interactive = FALSE,
+  label_orientation = "adaptive",
+  label_fallback = "legend"
+)
+
+# Pull leaf labels back inside the rim instead of the outside-border default
+krona_like_pq(data_fungi_mini, interactive = FALSE, leaf_label_padding = -0.5)
+
 # Add a faint dotted motif on alternate sections (needs ggpattern)
 if (requireNamespace("ggpattern", quietly = TRUE)) {
   krona_like_pq(data_fungi_mini, interactive = FALSE, pattern = TRUE)
@@ -333,7 +423,7 @@ if (requireNamespace("scales", quietly = TRUE)) {
   pq_num <- data_fungi_mini
   phyloseq::tax_table(pq_num) <- cbind(
     phyloseq::tax_table(pq_num),
-    conf_score = as.character(stats::runif(phyloseq::ntaxa(pq_num)))
+    conf_score = taxa_sums(pq_num)
   )
   krona_like_pq(
     pq_num,

@@ -97,6 +97,12 @@ zoom_outlier_axis(
   e.g. `90` when many outliers are close together and labels overlap
   horizontally.
 
+- bar_gradient:
+
+  (logical, default `TRUE`) If `TRUE`, draw the outlier arrows with a
+  colour gradient along their length; if `FALSE`, use a solid
+  `arrow_color`.
+
 ## Value
 
 A modified

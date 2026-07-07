@@ -2,6 +2,11 @@
 
 ## ggplotpq 0.1.0 (Development version)
 
+- [`track_wkflow_formattable()`](https://adrientaudiere.github.io/ggplotpq/reference/track_wkflow_formattable.md)
+  gains `clean_parent` (default `TRUE`), which drops rows of `track_df`
+  that have no entry in `parent` before building the tree instead of
+  rendering them as unexplained roots; set to `FALSE` to keep the
+  previous behavior.
 - [`membership_from_list()`](https://adrientaudiere.github.io/ggplotpq/reference/membership_from_list.md)
   (internal) converts a named list of member vectors into a binary
   membership data frame (one row per unique member, one logical column
@@ -34,6 +39,50 @@
   NC-taxa heatmap, ordination), migrated from `tidypq`; the programmatic
   counterpart is
   [`tidypq::identify_contam_negcontrol_pq()`](https://adrientaudiere.github.io/tidypq/reference/identify_contam_negcontrol_pq.html).
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  static sunburst’s default (`"auto"`/`"radial"`) styling now reads
+  correctly as intended: **internal** labels run tangentially,
+  arc-following along their own ring band; **leaf** labels are radial, a
+  spoke reading straight outward from the centre, placed outside the
+  coloured arc with the offset controlled by a new `leaf_label_padding`
+  argument (default `0.08`; `0` sits right at the border, negative
+  values pull the label back inside the wedge, larger values push it
+  further out with a leader line); also gains two more
+  `label_orientation` values, `"mixed"` (internal labels
+  circular/tangential, leaf labels radial) and `"adaptive"` (every label
+  tries the radial placement first and falls back to circular/tangential
+  only when radial does not fit the arc); a new `dismiss_overlaps`
+  argument (default `TRUE`) detects radially-oriented labels that would
+  visually crowd a denser neighbour and drops the lower-value one
+  instead of drawing overlapping text, fixing the label pile-ups seen in
+  dense regions; and a new `label_fallback` argument
+  (`"dot"`/`"initials"`/`"none"`/`"legend"`, with `fallback_symbol` and
+  `fallback_nchar` to customise it) controls what replaces a label that
+  has no room or was dismissed for overlapping – `"legend"` assigns a
+  unique short code (or, if that doesn’t fit either, a number) to each
+  such label and lists it in an on-canvas legend, instead of the
+  previous fixed dot; default label sizes are also slightly smaller to
+  reduce crowding.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  interactive sunburst: fixed a bug where clicking a wedge to zoom left
+  stray ancestor/sibling labels rendered in white at the plot centre –
+  `zoomTo()`/`zoomTreemap()` now hide any path or label outside the
+  zoomed focus’s own subtree instead of letting the zoom-rescale formula
+  (only valid for descendants of the focus) collapse them onto the
+  centre point; brought label placement to parity with the corrected
+  static model (internal labels default to tangential/arc-following,
+  leaf labels default to radial/spoke, each falling back to the other
+  style and then a dot when it does not fit), with overlap dismissal
+  ported from the static path and label classification recomputed on
+  every zoom (a thin-wedge dot correctly becomes a full label once
+  zooming reveals enough room, and vice versa) instead of being frozen
+  at initial render; a wedge too narrow for any label in the full,
+  un-zoomed tree is no longer permanently excluded from ever getting one
+  – eligibility is now re-evaluated against the current zoom’s rescaled
+  width, so zooming into a small clade correctly reveals labels for it;
+  default font size is smaller (9px) and default widget height is taller
+  (900px, up from 700px) since the widget is meant to be viewed
+  full-screen.
 - [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
   static sunburst now places leaf labels OUTSIDE the rim (radial,
   reading outward, readable in every quadrant) linked to their wedge by
@@ -83,12 +132,14 @@
   value stays in the upper panel.
 - [`zoom_outlier_axis()`](https://adrientaudiere.github.io/ggplotpq/reference/zoom_outlier_axis.md)
   zooms the plot into the main data cluster (largest group of
-  consecutive values) using `coord_cartesian()` and draws an arrow with
-  the outlier value at the panel edge for each outlier point; works for
-  `"y"`, `"x"`, or `"both"` axes and supports both direct-call and
-  `+`-operator usage; gains `extra_margin` (automatically enlarges
-  `plot.margin` on the outlier side so that `clip = "off"` arrows and
-  labels are not cut by the device boundary, default 30 pt).
+  consecutive values) using
+  [`coord_cartesian()`](https://ggplot2.tidyverse.org/reference/coord_cartesian.html)
+  and draws an arrow with the outlier value at the panel edge for each
+  outlier point; works for `"y"`, `"x"`, or `"both"` axes and supports
+  both direct-call and `+`-operator usage; gains `extra_margin`
+  (automatically enlarges `plot.margin` on the outlier side so that
+  `clip = "off"` arrows and labels are not cut by the device boundary,
+  default 30 pt).
 - [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
   default for `ranks = "All"` now restricts to the seven classical
   taxonomic ranks (Kingdom → Species) when at least two are present,
@@ -108,14 +159,15 @@
   gains `check_nestedness` (default `TRUE`) to toggle the nestedness
   validation warning, `collapse_single` to remove uninformative
   single-child intermediate ranks, `color_as_numeric` to map any numeric
-  `tax_table()` column to a viridis gradient, `label_pct` (`"none"` /
-  `"total"` / `"parent"`) to append proportions to section labels,
-  `min_prop` to merge low-abundance siblings into a crosshatch-marked
-  `"n more"` aggregate, `show_center_count` (default `TRUE`) to display
-  the total count in the sunburst centre (and the focused node count on
-  zoom), `show_search` to add a live search box to the interactive
-  widget, and `show_info_panel` to add a hover info panel showing count
-  and percentages; also adds nestedness validation (`cli_warn` on
+  [`tax_table()`](https://rdrr.io/pkg/phyloseq/man/tax_table-methods.html)
+  column to a viridis gradient, `label_pct` (`"none"` / `"total"` /
+  `"parent"`) to append proportions to section labels, `min_prop` to
+  merge low-abundance siblings into a crosshatch-marked `"n more"`
+  aggregate, `show_center_count` (default `TRUE`) to display the total
+  count in the sunburst centre (and the focused node count on zoom),
+  `show_search` to add a live search box to the interactive widget, and
+  `show_info_panel` to add a hover info panel showing count and
+  percentages; also adds nestedness validation (`cli_warn` on
   non-strictly-nested `tax_table`), middle-ellipsis label truncation,
   and radially-oriented leaf-rank labels.
 - [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
@@ -220,6 +272,18 @@
   [`MiscMetabar::plot_tax_pq()`](https://adrientaudiere.github.io/MiscMetabar/reference/plot_tax_pq.html):
   counts of a chosen taxonomic rank are stacked per sample without being
   normalised to percentages, useful for spike-in or biomass comparisons.
+- [`plot_tax_table_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_table_pq.md)
+  draws a compact distribution overview of `tax_table` columns (via
+  [`tidypq::tax_table_to_df()`](https://adrientaudiere.github.io/tidypq/reference/tax_table_to_df.html))
+  as one horizontal row per column, with tidyselect column selection
+  (including regex helpers such as
+  [`dplyr::matches()`](https://tidyselect.r-lib.org/reference/starts_with.html));
+  factor/character/logical columns become a single stacked bar (dark
+  grey for `NA`, colored zones sized by proportion, categories below
+  `threshold` in white and unlabeled, labels sized to fit via
+  `ggfittext`), numeric columns become a thin horizontal raincloud
+  (violin + boxplot + jitter); rows are stacked into one `patchwork`
+  figure by default, or returned as a named list via `combine = FALSE`.
 - [`plot_taxa_heatmap_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_taxa_heatmap_pq.md)
   draws a heatmap of the `n_top` most abundant taxa across samples, with
   optional log10 transform and custom fill scale; aggregated by the

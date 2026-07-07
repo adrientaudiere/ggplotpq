@@ -121,6 +121,11 @@ palettes).
 - [`plot_sample_depth_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_sample_depth_pq.md)
   : Plot per-sample read depth (number of sequences)
 
+- [`plot_tax_table_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_table_pq.md)
+  :
+
+  Plot a compact distribution overview of `tax_table` columns
+
 - [`plot_taxa_heatmap_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_taxa_heatmap_pq.md)
   : Heatmap of the top-N most abundant taxa across samples
 

@@ -65,7 +65,7 @@ analysis. The typical workflow is to detect biomarker taxa elsewhere (e.g. a
 LefSe analysis, planned for the \code{netaipq} package) and pass the resulting
 taxa names to \code{biomarker_taxa}. When \code{biomarker_taxa} is \code{NULL}, every taxon
 is shown. The original published figure this reproduces colours ZOTUs by the
-treatment (control / manure / frass) in which they are enriched (Wang et al.
+treatment (control / manure / frass) in which they are enriched (Du et al.
 2023, \doi{10.1007/s42832-023-0196-0}).
 }
 \examples{
@@ -88,7 +88,7 @@ ternary_biomarker_pq(
 }
 }
 \references{
-Wang et al. (2023) \doi{10.1007/s42832-023-0196-0}.
+Du et al. (2023) \doi{10.1007/s42832-023-0196-0}.
 }
 \seealso{
 \code{\link[=ternary_pq]{ternary_pq()}} for a base-ggplot2 ternary/diamond of all taxa
