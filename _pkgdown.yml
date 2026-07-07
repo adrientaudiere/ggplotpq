@@ -6,6 +6,9 @@ template:
     fg: "#16091f"
     primary: "#0072B2"
     secondary: "#a3345a"
+    base_font: "Fira Mono, monospace"
+    heading_font: "Fira Sans, sans-serif"
+    code_font: "Fira Code, monospace"
 
 reference:
   - title: "Migration from MiscMetabar"
@@ -41,6 +44,7 @@ reference:
       - krona_like_pq
       - palette_earthtones
       - plot_sample_depth_pq
+      - plot_tax_table_pq
       - plot_taxa_heatmap_pq
       - scale_color_pq_discrete
       - scale_fill_pq_discrete
