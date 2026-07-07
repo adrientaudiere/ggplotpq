@@ -1,17 +1,7 @@
 # Changelog
 
-## ggplotpq 0.1.0 (Development version)
+## ggplotpq 0.1.0\* `plot_tax_count_pq()`, `ternary_pq()` and `ternary_biomarker_pq()` now validate their grouping column through `MiscMetabar::verify_fact_pq()`, raising a clear error listing the available `sample_data` columns when the requested `fact` column is absent; `plot_tax_count_pq()` previously accessed the column without checking it existed.
 
-- [`plot_tax_count_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_count_pq.md),
-  [`ternary_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/ternary_pq.md)
-  and
-  [`ternary_biomarker_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/ternary_biomarker_pq.md)
-  now validate their grouping column through
-  [`MiscMetabar::verify_fact_pq()`](https://adrientaudiere.github.io/MiscMetabar/reference/verify_fact_pq.html),
-  raising a clear error listing the available `sample_data` columns when
-  the requested `fact` column is absent;
-  [`plot_tax_count_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_count_pq.md)
-  previously accessed the column without checking it existed.
 - [`track_wkflow_formattable()`](https://adrientaudiere.github.io/ggplotpq/reference/track_wkflow_formattable.md)
   gains `clean_parent` (default `TRUE`), which drops rows of `track_df`
   that have no entry in `parent` before building the tree instead of
