@@ -387,6 +387,91 @@ utils::globalVariables(c(
 # Each surviving node records `collapsed_path`: the names of the ancestor
 # ranks that were skipped to reach it (top-down, excluding its own name), so
 # the full taxonomic path can be shown when `show_collapsed_path = TRUE`.
+# Prepend the genus initial to each species-rank name ("muscaria" ->
+# "A. muscaria"). `sp_depth` is the 1-based rank index of the "Species" rank;
+# `parent_name` is the (unabbreviated) name of the node's parent, i.e. the
+# genus for a species node. Placeholder parents/names ("unassigned") and names
+# that already carry an initial are left untouched.
+.abbrev_species_names <- function(node, sp_depth, parent_name = NULL) {
+  is_species <- isTRUE(node$depth == sp_depth)
+  if (
+    is_species &&
+      !is.null(parent_name) &&
+      !is.na(parent_name) &&
+      nzchar(parent_name) &&
+      parent_name != "unassigned" &&
+      !is.na(node$name) &&
+      nzchar(node$name) &&
+      node$name != "unassigned" &&
+      !grepl("^[A-Za-z]\\. ", node$name)
+  ) {
+    node$name <- paste0(toupper(substr(parent_name, 1, 1)), ". ", node$name)
+  }
+  if (length(node$children) > 0) {
+    node$children <- lapply(
+      node$children,
+      function(child) .abbrev_species_names(child, sp_depth, node$name)
+    )
+  }
+  node
+}
+
+# Attach a `size_mult` (font-size multiplier) to every node. Three forms of
+# `label_size` are supported, dispatched in `krona_like_pq()`:
+#   * scalar        -> every node gets the same multiplier.
+#   * one per rank  -> a node at rank depth `d` gets `sizes[d]`.
+#   * one per taxon -> each leaf's multiplier is the mean of its constituent
+#     taxa's values (positional, `taxa_names()` order); each internal node's is
+#     the mean of all its descendant leaves' multipliers.
+.assign_size_scalar <- function(node, mult) {
+  node$size_mult <- mult
+  if (length(node$children) > 0) {
+    node$children <- lapply(node$children, function(ch) {
+      .assign_size_scalar(ch, mult)
+    })
+  }
+  node
+}
+
+.assign_size_by_rank <- function(node, sizes) {
+  d <- node$depth
+  node$size_mult <- if (!is.null(d) && d >= 1 && d <= length(sizes)) {
+    sizes[d]
+  } else {
+    1
+  }
+  if (length(node$children) > 0) {
+    node$children <- lapply(node$children, function(ch) {
+      .assign_size_by_rank(ch, sizes)
+    })
+  }
+  node
+}
+
+# Returns list(node = <node with size_mult set>, leaves = <descendant-leaf
+# multipliers>). `path` is the sequence of rank values from the root down to
+# (and including) this node, used to select the taxa that fall in a leaf.
+.assign_size_by_taxon <- function(node, tt_norm, ranks, sizes, path) {
+  if (length(node$children) == 0) {
+    keep <- rep(TRUE, nrow(tt_norm))
+    for (i in seq_along(path)) {
+      keep <- keep & (tt_norm[[ranks[i]]] == path[i])
+    }
+    vals <- sizes[keep]
+    sz <- if (length(vals) > 0) mean(vals, na.rm = TRUE) else NA_real_
+    node$size_mult <- sz
+    return(list(node = node, leaves = if (is.na(sz)) numeric(0) else sz))
+  }
+  all_leaves <- numeric(0)
+  node$children <- lapply(node$children, function(ch) {
+    res <- .assign_size_by_taxon(ch, tt_norm, ranks, sizes, c(path, ch$name))
+    all_leaves <<- c(all_leaves, res$leaves)
+    res$node
+  })
+  node$size_mult <- if (length(all_leaves) > 0) mean(all_leaves) else NA_real_
+  list(node = node, leaves = all_leaves)
+}
+
 .collapse_single_children <- function(node) {
   if (length(node$children) == 0) {
     return(node)
@@ -646,6 +731,11 @@ utils::globalVariables(c(
     },
     is_aggregate = isTRUE(node$is_aggregate),
     parent_value = parent_value,
+    size_mult = if (is.null(node$size_mult) || length(node$size_mult) == 0) {
+      NA_real_
+    } else {
+      node$size_mult
+    },
     collapsed_path = if (is.null(node$collapsed_path)) {
       NA_character_
     } else {
@@ -708,6 +798,11 @@ utils::globalVariables(c(
     },
     is_aggregate = isTRUE(node$is_aggregate),
     parent_value = parent_value,
+    size_mult = if (is.null(node$size_mult) || length(node$size_mult) == 0) {
+      NA_real_
+    } else {
+      node$size_mult
+    },
     collapsed_path = if (is.null(node$collapsed_path)) {
       NA_character_
     } else {
@@ -777,6 +872,25 @@ utils::globalVariables(c(
     )
   }
   x
+}
+
+# Truncate arc-following labels to the number of characters that fit their arc.
+# `avail_chars` is the per-label room (arc length / per-character width). Labels
+# that already fit are returned unchanged; labels longer than the room are
+# middle-truncated ("Stro...aceae") when at least `min_keep` characters of room
+# remain, and set to NA (hidden -> fallback marker) when the arc is too narrow
+# for even a readable truncation.
+.fit_truncate <- function(labels, avail_chars, min_keep = 8L) {
+  n_fit <- floor(avail_chars)
+  out <- labels
+  long <- !is.na(labels) & nchar(labels) > n_fit
+  hide <- long & n_fit < min_keep
+  trunc <- long & !hide
+  if (any(trunc)) {
+    out[trunc] <- .truncate_label_middle(labels[trunc], n_fit[trunc])
+  }
+  out[hide] <- NA_character_
+  out
 }
 
 # Alternate sections ("one on two") within each ring/level so neighbours can
@@ -1048,6 +1162,7 @@ utils::globalVariables(c(
   show_center_count = TRUE,
   label_pct = "none",
   label_orientation = "auto",
+  truncate_labels = FALSE,
   dismiss_overlaps = TRUE,
   label_fallback = "dot",
   fallback_symbol = "·",
@@ -1063,6 +1178,20 @@ utils::globalVariables(c(
       "Package {.pkg ggpattern} is required for {.code pattern = TRUE}. Install it with {.code install.packages('ggpattern')} or use {.code pattern = FALSE}."
     )
   }
+
+  # The three documented ROADMAP options map onto the historical internal mode
+  # names; normalise here so every downstream branch sees a canonical value.
+  #   option1 -> "tangential" (every label arc-following)
+  #   option2 -> "mixed"      (internal arc-following, leaf spoke)
+  #   option3 -> "auto"       (default: internal arc-following, leaf spoke with
+  #                            overlap dismissal)
+  label_orientation <- switch(
+    label_orientation,
+    option1 = "tangential",
+    option2 = "mixed",
+    option3 = "auto",
+    label_orientation
+  )
 
   total_weight <- hier$value
 
@@ -1088,7 +1217,7 @@ utils::globalVariables(c(
     # from the padding plus a fixed label-length allowance. Very negative
     # padding (pulling labels back inside) needs no reserved room at all.
     leaf_outside <- label_orientation != "tangential"
-    outer_room <- if (leaf_outside) max(0, leaf_label_padding + 1.5) else 0.0
+    outer_room <- if (leaf_outside) max(0, leaf_label_padding + 1.0) else 0.0
     p <- ggplot2::ggplot() +
       .krona_rect_layer(
         df,
@@ -1109,9 +1238,12 @@ utils::globalVariables(c(
       ggplot2::scale_y_continuous(
         limits = c(0, max_depth + 1 + outer_room)
       ) +
+      # Label layers map their per-row point size directly (base size times the
+      # `label_size` multiplier), so the size scale must pass values through.
+      ggplot2::scale_size_identity() +
       ggplot2::theme_void() +
       ggplot2::theme(
-        plot.margin = ggplot2::margin(12, 12, 12, 12, "pt")
+        plot.margin = ggplot2::margin(24, 24, 24, 24, "pt")
       ) +
       ggplot2::labs(title = title)
     if (use_gradient && !is.null(val_range)) {
@@ -1253,9 +1385,13 @@ utils::globalVariables(c(
       1
     )
 
-    sz_inner <- 2.0
-    sz_leaf <- 2.2
-    cw <- 0.16 # approx radius units per character (tangential fit test)
+    sz_inner <- 1.7
+    sz_leaf <- 1.85
+    cw <- 0.135 # approx radius units per character (tangential fit test)
+    # Per-row size = base size * `label_size` multiplier (1 when unset/NA).
+    sz_of <- function(rows, base) {
+      base * ifelse(is.na(rows$size_mult), 1, rows$size_mult)
+    }
 
     inner_df <- lab_df[!lab_df$is_leaf, , drop = FALSE]
     leaf_df <- lab_df[lab_df$is_leaf, , drop = FALSE]
@@ -1268,11 +1404,27 @@ utils::globalVariables(c(
       # Internal (non-leaf) rows are always exactly one ring thick, so their
       # band centre and truncation room are both fixed regardless of depth.
       inner_df$ymid <- inner_df$depth + 0.5
-      maxch <- pmax(4L, floor(1 / 0.085))
-      tang_lab <- .truncate_label_middle(inner_df$lab, 34)
-      rad_lab <- .truncate_label_middle(inner_df$lab, maxch)
-      tang_fits <- nchar(tang_lab) * cw <= inner_df$arcw * inner_df$ymid
-      rad_fits <- inner_df$arcw * inner_df$ymid >= 0.30
+      maxch <- pmax(4L, floor(1 / 0.072))
+      # `truncate_labels` controls whether the middle ellipsis is EVER used.
+      #   TRUE  -> shorten long names to fit ("Stro...aceae"), staying visible.
+      #   FALSE -> show the full name (no ellipsis anywhere); a name that does
+      #            not fit its arc is simply hidden (tangential) or left to run
+      #            along its radial spoke (radial). Pair with `label_size` to
+      #            shrink text so full names fit.
+      rad_lab <- if (truncate_labels) {
+        .truncate_label_middle(inner_df$lab, maxch)
+      } else {
+        inner_df$lab
+      }
+      inner_avail <- inner_df$arcw * inner_df$ymid / cw
+      if (truncate_labels) {
+        tang_lab <- .fit_truncate(inner_df$lab, inner_avail)
+        tang_fits <- !is.na(tang_lab)
+      } else {
+        tang_lab <- inner_df$lab
+        tang_fits <- nchar(tang_lab) * cw <= inner_df$arcw * inner_df$ymid
+      }
+      rad_fits <- inner_df$arcw * inner_df$ymid >= 0.25
 
       if (internal_style == "tangential") {
         use_tang <- tang_fits
@@ -1289,6 +1441,7 @@ utils::globalVariables(c(
         show_tang <- inner_df[use_tang, , drop = FALSE]
         show_tang$lab <- tang_lab[use_tang]
         show_tang$ang <- ang_tang_of(show_tang$xmid)
+        show_tang$sz <- sz_of(show_tang, sz_inner)
         p <- p +
           ggplot2::geom_text(
             data = show_tang,
@@ -1297,10 +1450,10 @@ utils::globalVariables(c(
               y = ymid,
               label = lab,
               angle = ang,
-              colour = col
+              colour = col,
+              size = sz
             ),
             hjust = 0.5,
-            size = sz_inner,
             fontface = "bold"
           )
       }
@@ -1321,6 +1474,7 @@ utils::globalVariables(c(
         drawn <- show_rad[!show_rad$overlap_dismissed, , drop = FALSE]
         if (nrow(drawn) > 0) {
           drawn$ang <- ang_radial_of(drawn$xmid)
+          drawn$sz <- sz_of(drawn, sz_inner)
           # Centred on the band (hjust = 0.5): unlike leaf labels, an internal
           # radial label doesn't need a hemisphere-based hjust switch -- only
           # the rotation angle still flips by hemisphere, to avoid upside-down
@@ -1333,11 +1487,11 @@ utils::globalVariables(c(
                 y = ymid,
                 label = lab,
                 angle = ang,
-                colour = col
+                colour = col,
+                size = sz
               ),
               hjust = 0.5,
               vjust = 0.5,
-              size = sz_inner,
               fontface = "bold"
             )
         }
@@ -1355,9 +1509,15 @@ utils::globalVariables(c(
     # ---- leaf labels ------------------------------------------------------
     if (nrow(leaf_df) > 0) {
       leaf_df$ymid <- (leaf_df$depth + leaf_df$depthmax) / 2
-      tang_lab <- .truncate_label_middle(leaf_df$lab, 34)
-      tang_fits <- nchar(tang_lab) * cw <= leaf_df$arcw * leaf_df$ymid
-      rad_fits <- leaf_df$arcw * rim >= 0.5
+      leaf_avail <- leaf_df$arcw * leaf_df$ymid / cw
+      if (truncate_labels) {
+        tang_lab <- .fit_truncate(leaf_df$lab, leaf_avail)
+        tang_fits <- !is.na(tang_lab)
+      } else {
+        tang_lab <- leaf_df$lab
+        tang_fits <- nchar(tang_lab) * cw <= leaf_df$arcw * leaf_df$ymid
+      }
+      rad_fits <- leaf_df$arcw * rim >= 0.42
 
       if (leaf_style == "tangential") {
         use_tang <- tang_fits
@@ -1375,6 +1535,7 @@ utils::globalVariables(c(
         show_tang <- leaf_df[use_tang, , drop = FALSE]
         show_tang$lab <- tang_lab[use_tang]
         show_tang$ang <- ang_tang_of(show_tang$xmid)
+        show_tang$sz <- sz_of(show_tang, sz_leaf)
         p <- p +
           ggplot2::geom_text(
             data = show_tang,
@@ -1383,10 +1544,10 @@ utils::globalVariables(c(
               y = ymid,
               label = lab,
               angle = ang,
-              colour = col
+              colour = col,
+              size = sz
             ),
             hjust = 0.5,
-            size = sz_leaf,
             fontface = "bold"
           )
       }
@@ -1399,7 +1560,9 @@ utils::globalVariables(c(
         # which depth the row originated from: one placement formula, and
         # dismiss_overlaps compares every leaf-radial label globally.
         show_rad <- leaf_df[use_rad, , drop = FALSE]
-        show_rad$lab <- .truncate_label_middle(show_rad$lab, 40)
+        if (truncate_labels) {
+          show_rad$lab <- .truncate_label_middle(show_rad$lab, 40)
+        }
         show_rad$y_out <- rim + leaf_label_padding
         if (dismiss_overlaps) {
           show_rad <- .dismiss_overlapping_labels(show_rad)
@@ -1413,6 +1576,7 @@ utils::globalVariables(c(
           # near hj_side above) -- leaf labels read as rays pointing straight
           # out from the centre, paired with the matching hj_side split.
           drawn$ang <- ang_tang_of(drawn$xmid)
+          drawn$sz <- sz_of(drawn, sz_leaf)
           # A leader line only has something to visually bridge when the
           # label sits with a real gap past the border.
           if (leaf_label_padding > 0.03) {
@@ -1436,10 +1600,10 @@ utils::globalVariables(c(
                 label = lab,
                 angle = ang,
                 hjust = hj_side,
-                colour = col
+                colour = col,
+                size = sz
               ),
               vjust = 0.5,
-              size = sz_leaf,
               fontface = "bold"
             )
         }
@@ -1742,30 +1906,60 @@ utils::globalVariables(c(
 #'   the skipped intermediate ranks joined by `" / "` and prefixed to the node
 #'   name (e.g. `"Stereaceae / Stereum"`) -- drawn in grey so the merged ranks
 #'   remain visible.
+#' @param abbrev_species (logical, default `FALSE`) When `TRUE`, each name at
+#'   the `"Species"` rank is prefixed with the initial of its parent genus, so
+#'   a species epithet reads as an abbreviated binomial (e.g. `"muscaria"`
+#'   under genus `"Amanita"` becomes `"A. muscaria"`). Applies to both the
+#'   static and interactive plots. Placeholder names (`"unassigned"`) and names
+#'   already carrying an initial are left untouched; if no `"Species"` rank is
+#'   among `ranks`, a warning is issued and names are unchanged.
+#' @param label_size (numeric, default `NULL`) A positive multiplier on the
+#'   base label font size, applied to both the static and interactive plots.
+#'   Its length selects the mode:
+#'   * length `1` -- a single multiplier for every label.
+#'   * length `length(ranks)` -- one multiplier per rank; a label at rank `i`
+#'     uses `label_size[i]`.
+#'   * length `ntaxa(physeq)` -- one value per taxon, positional in
+#'     `taxa_names()` order. Each leaf's multiplier is the mean of its
+#'     constituent taxa's values, and each internal node's is the mean of all
+#'     its descendant leaves' multipliers.
+#'   `NULL` keeps the default sizing. Values must be finite and `> 0`.
 #' @param grey_terms (character, default `c(NA, "unassigned", "unknown")`)
 #'   Section names whose colour is overridden to grey, used to visually mute
 #'   uninformative taxa. `NA` matches sections with a missing name. Pass
 #'   `character(0)` to disable.
 #' @param label_orientation (character, default `"auto"`) Static sunburst
-#'   only. Controls how section labels are placed.
-#'   * `"auto"` / `"radial"`: **internal** labels run **along their own ring
-#'     band** (arc-following, never upside-down), centred; **leaf** labels
-#'     are **radial**, a spoke reading straight outward from the centre,
-#'     placed outside the coloured arc by `leaf_label_padding` (`"radial"`
-#'     differs from `"auto"` only in historical naming -- both place leaf
-#'     labels outside the rim by default now).
-#'   * `"tangential"`: every label (internal and leaf) runs along its arc,
-#'     centred in the band, shown only when the name fits.
-#'   * `"mixed"`: **internal** labels are tangential (circular); **leaf**
-#'     labels are radial, outside the rim like above.
-#'   * `"adaptive"`: every label (internal and leaf) tries the radial
-#'     placement first and falls back to tangential only when radial does not
-#'     fit the arc.
+#'   only. Controls how section labels are placed. The three documented modes
+#'   are `"option1"`, `"option2"`, and `"option3"`; the older names are kept
+#'   as aliases.
+#'   * `"option3"` / `"auto"` (default): **internal** labels run **along their
+#'     own ring band** (arc-following, never upside-down), centred; **leaf**
+#'     labels are **radial**, a spoke reading straight outward from the
+#'     centre, placed outside the coloured arc by `leaf_label_padding`, with
+#'     crowded leaves thinned by `dismiss_overlaps`. `"radial"` is a further
+#'     alias of this mode.
+#'   * `"option1"` / `"tangential"`: **every** label (internal and leaf) runs
+#'     along its arc, centred in the band. Long labels are shortened to fit
+#'     with `truncate_labels`; a name still too wide for its arc is hidden
+#'     (replaced by the `label_fallback` marker).
+#'   * `"option2"` / `"mixed"`: **internal** labels are tangential (circular);
+#'     **leaf** labels are radial, outside the rim like `"option3"`.
+#'   * `"adaptive"`: every label tries the radial placement first and falls
+#'     back to tangential only when radial does not fit the arc.
 #'   In every mode, a label with nowhere to go gets the `label_fallback`
 #'   marker; see `dismiss_overlaps` for thinning crowded radial labels and
 #'   `leaf_label_padding` for how far outside the rim leaf labels sit.
-#'   The interactive widget mirrors this for its default styling (internal
-#'   arc-following, leaf radial), but does not expose all five modes.
+#'   The interactive widget mirrors the default styling (internal
+#'   arc-following, leaf radial), but does not expose these modes.
+#' @param truncate_labels (logical, default `FALSE`) Applies to the static
+#'   sunburst and the interactive widget. Controls whether labels may be
+#'   abbreviated with a middle ellipsis. When `TRUE`, a label too long for its
+#'   space is shortened so it still fits and stays visible (e.g.
+#'   `"Strophariaceae"` becomes `"Stro...aceae"`). When `FALSE` (the default),
+#'   labels are never abbreviated: a name is shown in full when it fits, and an
+#'   arc-following name too long for its arc is hidden (its wedge gets the
+#'   `label_fallback` marker) rather than truncated. Pair `FALSE` with
+#'   `label_size` to shrink the text until full names fit.
 #' @param dismiss_overlaps (logical, default `TRUE`) Static sunburst only.
 #'   Radially-oriented labels are anchored at a single point and can visually
 #'   crowd a neighbour when their wedges are angularly close, even though each
@@ -1821,10 +2015,12 @@ utils::globalVariables(c(
 #'   via [htmlwidgets::saveWidget()]. The widget is then returned invisibly.
 #'   Ignored when `interactive = FALSE`.
 #' @param width,height (numeric, default `NULL`) Widget dimensions in pixels.
-#'   When `width` is `NULL`, the widget fills its container (RStudio viewer /
-#'   Shiny); when `height` is `NULL`, it defaults to `900` -- the widget is
-#'   meant to be viewed full-screen, and a shorter default leaves too little
-#'   room for the dense label layout. Ignored when `interactive = FALSE`.
+#'   Both default to `NULL`, in which case the widget **fills its container**:
+#'   the whole browser window for a standalone `.html`, the whole RStudio
+#'   viewer pane, and the full viewport height elsewhere -- the widget is meant
+#'   to be viewed full-screen and the dense label layout needs the room. Pass
+#'   explicit pixel values to fix the size instead. Ignored when
+#'   `interactive = FALSE`.
 #'
 #' @return When `interactive = TRUE`, an `htmlwidget` object (invisibly if
 #'   `file_path` is set). When `interactive = FALSE`, a [ggplot2::ggplot]
@@ -1946,8 +2142,20 @@ krona_like_pq <- function(
   min_prop = NULL,
   collapse_single = FALSE,
   show_collapsed_path = FALSE,
+  abbrev_species = FALSE,
+  label_size = NULL,
   grey_terms = c(NA_character_, "unassigned", "unknown"),
-  label_orientation = c("auto", "tangential", "radial", "mixed", "adaptive"),
+  label_orientation = c(
+    "auto",
+    "option1",
+    "option2",
+    "option3",
+    "tangential",
+    "radial",
+    "mixed",
+    "adaptive"
+  ),
+  truncate_labels = FALSE,
   dismiss_overlaps = TRUE,
   label_fallback = c("dot", "initials", "none", "legend"),
   fallback_symbol = "·",
@@ -1965,6 +2173,16 @@ krona_like_pq <- function(
   label_pct <- match.arg(label_pct)
   label_orientation <- match.arg(label_orientation)
   label_fallback <- match.arg(label_fallback)
+  if (!is.logical(truncate_labels) || length(truncate_labels) != 1L) {
+    cli::cli_abort(
+      "{.arg truncate_labels} must be a single {.code TRUE} or {.code FALSE}."
+    )
+  }
+  if (!is.logical(abbrev_species) || length(abbrev_species) != 1L) {
+    cli::cli_abort(
+      "{.arg abbrev_species} must be a single {.code TRUE} or {.code FALSE}."
+    )
+  }
   if (
     !is.character(fallback_symbol) ||
       length(fallback_symbol) != 1 ||
@@ -2021,6 +2239,37 @@ krona_like_pq <- function(
     }
   }
 
+  # Classify `label_size` by its length: scalar, one per selected rank, or one
+  # per taxon (positional in `taxa_names()` order). The per-taxon vector is
+  # aligned to `taxa_names()`, so it must ride along the same zero-weight
+  # filtering as the taxa themselves (done just below).
+  label_size_mode <- "none"
+  if (!is.null(label_size)) {
+    if (
+      !is.numeric(label_size) ||
+        anyNA(label_size) ||
+        any(!is.finite(label_size)) ||
+        any(label_size <= 0)
+    ) {
+      cli::cli_abort(
+        "{.arg label_size} must be positive, finite number(s)."
+      )
+    }
+    n_taxa_all <- phyloseq::ntaxa(physeq)
+    if (length(label_size) == 1L) {
+      label_size_mode <- "scalar"
+    } else if (length(label_size) == length(ranks)) {
+      label_size_mode <- "rank"
+    } else if (length(label_size) == n_taxa_all) {
+      label_size_mode <- "taxon"
+    } else {
+      cli::cli_abort(c(
+        "{.arg label_size} has an unsupported length ({length(label_size)}).",
+        i = "Use a single value, one per rank ({length(ranks)}), or one per taxon ({n_taxa_all})."
+      ))
+    }
+  }
+
   weights <- .resolve_weights(physeq, weight_by)
 
   tt <- as.data.frame(
@@ -2036,6 +2285,9 @@ krona_like_pq <- function(
   }
   tt <- tt[keep, , drop = FALSE]
   weights <- weights[keep]
+  if (label_size_mode == "taxon") {
+    label_size <- label_size[keep]
+  }
 
   if (nrow(tt) == 0) {
     cli::cli_abort("No taxa with positive weight remain to plot.")
@@ -2098,6 +2350,44 @@ krona_like_pq <- function(
   }
   hier$name <- "All"
 
+  # Attach per-node font-size multipliers from `label_size`. Done before
+  # `abbrev_species`/`collapse_single` so the per-taxon path matches raw rank
+  # values, and so both the static and interactive paths share one hierarchy.
+  if (label_size_mode == "scalar") {
+    hier <- .assign_size_scalar(hier, label_size)
+  } else if (label_size_mode == "rank") {
+    hier <- .assign_size_by_rank(hier, label_size)
+  } else if (label_size_mode == "taxon") {
+    tt_norm <- tt
+    for (rk in ranks) {
+      v <- as.character(tt_norm[[rk]])
+      v[is.na(v) | v == ""] <- "unassigned"
+      tt_norm[[rk]] <- v
+    }
+    hier <- .assign_size_by_taxon(
+      hier,
+      tt_norm,
+      ranks,
+      label_size,
+      character()
+    )$node
+  }
+
+  # Prepend the genus initial to species names ("muscaria" -> "A. muscaria").
+  # Done before `collapse_single` while `node$depth` still matches the rank
+  # index (collapsing invalidates it), so both the static and interactive
+  # paths inherit the abbreviated names from this single hierarchy.
+  if (abbrev_species) {
+    sp_idx <- which(tolower(ranks) == "species")
+    if (length(sp_idx) == 1L) {
+      hier <- .abbrev_species_names(hier, sp_idx)
+    } else {
+      cli::cli_warn(
+        "{.arg abbrev_species} is {.code TRUE} but no {.val Species} rank is in {.arg ranks}; names left unchanged."
+      )
+    }
+  }
+
   if (collapse_single) {
     hier <- .collapse_single_children(hier)
   }
@@ -2159,6 +2449,7 @@ krona_like_pq <- function(
           showCenterCount = show_center_count,
           showSearch = show_search,
           showInfoPanel = show_info_panel,
+          truncateLabels = truncate_labels,
           labelPct = label_pct,
           totalWeight = hier$value,
           ranks = as.list(ranks),
@@ -2168,9 +2459,24 @@ krona_like_pq <- function(
         )
       ),
       width = width,
-      # Meant to be viewed full-screen (labels are dense); 700 left too little
-      # vertical room on a normal monitor.
-      height = if (is.null(height)) 900L else height,
+      height = height,
+      # Meant to be viewed full-screen (labels are dense). By default the
+      # widget fills its container: the whole browser window for a standalone
+      # `.html` (`browser.fill`), the whole viewer pane in RStudio
+      # (`viewer.fill`), and the full viewport height (`100vh`) otherwise, with
+      # no surrounding padding. Explicit `width`/`height` still override this.
+      sizingPolicy = htmlwidgets::sizingPolicy(
+        padding = 0,
+        browser.fill = TRUE,
+        browser.padding = 0,
+        viewer.fill = TRUE,
+        viewer.padding = 0,
+        knitr.figure = FALSE,
+        knitr.defaultWidth = "100%",
+        knitr.defaultHeight = "700px",
+        defaultWidth = "100%",
+        defaultHeight = "100vh"
+      ),
       package = "ggplotpq"
     )
     if (!is.null(file_path)) {
@@ -2188,6 +2494,7 @@ krona_like_pq <- function(
     show_center_count = show_center_count,
     label_pct = label_pct,
     label_orientation = label_orientation,
+    truncate_labels = truncate_labels,
     dismiss_overlaps = dismiss_overlaps,
     label_fallback = label_fallback,
     fallback_symbol = fallback_symbol,

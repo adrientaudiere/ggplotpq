@@ -446,6 +446,166 @@ test_that(".truncate_label_middle leaves short labels unchanged", {
   expect_equal(ggplotpq:::.truncate_label_middle(x, n = 20), x)
 })
 
+# ---- abbrev_species --------------------------------------------------------
+
+test_that(".abbrev_species_names prepends the genus initial to species names", {
+  node <- list(
+    name = "All",
+    depth = 0,
+    children = list(
+      list(
+        name = "Amanita",
+        depth = 1,
+        children = list(
+          list(name = "muscaria", depth = 2, children = list()),
+          list(name = "unassigned", depth = 2, children = list())
+        )
+      )
+    )
+  )
+  out <- ggplotpq:::.abbrev_species_names(node, sp_depth = 2)
+  sp <- out$children[[1]]$children
+  expect_equal(sp[[1]]$name, "A. muscaria")
+  # Placeholder species names are left untouched.
+  expect_equal(sp[[2]]$name, "unassigned")
+  # Idempotent: re-running does not double-prefix.
+  out2 <- ggplotpq:::.abbrev_species_names(out, sp_depth = 2)
+  expect_equal(out2$children[[1]]$children[[1]]$name, "A. muscaria")
+})
+
+test_that("abbrev_species warns when no Species rank is selected", {
+  expect_warning(
+    krona_like_pq(
+      data_fungi_mini,
+      interactive = FALSE,
+      ranks = c("Order", "Family", "Genus"),
+      abbrev_species = TRUE,
+      check_nestedness = FALSE
+    ),
+    "Species"
+  )
+})
+
+test_that("abbrev_species must be a single logical", {
+  expect_error(
+    krona_like_pq(
+      data_fungi_mini,
+      interactive = FALSE,
+      abbrev_species = "yes",
+      check_nestedness = FALSE
+    ),
+    "abbrev_species"
+  )
+})
+
+# ---- label_size ------------------------------------------------------------
+
+test_that("scalar label_size scales every label's size", {
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_size = 3,
+    check_nestedness = FALSE
+  )
+  lays <- Filter(
+    function(l) {
+      inherits(l$geom, "GeomText") &&
+        is.data.frame(l$data) &&
+        "sz" %in% names(l$data)
+    },
+    p$layers
+  )
+  szs <- unlist(lapply(lays, function(l) l$data$sz))
+  # base sizes are 1.7 / 1.85, so 3x pushes every drawn label above 5.
+  expect_true(length(szs) > 0)
+  expect_gte(min(szs), 5)
+})
+
+test_that("per-rank label_size (length == n ranks) returns a ggplot", {
+  rk <- c("Order", "Family", "Genus", "Species")
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    ranks = rk,
+    label_size = c(1.6, 1.3, 1.0, 0.7),
+    check_nestedness = FALSE
+  )
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("per-taxon label_size (length == ntaxa) returns a ggplot", {
+  nt <- phyloseq::ntaxa(data_fungi_mini)
+  p <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    ranks = c("Order", "Family", "Genus", "Species"),
+    label_size = rep(1.2, nt),
+    check_nestedness = FALSE
+  )
+  expect_s3_class(p, "ggplot")
+})
+
+test_that("label_size of unsupported length aborts", {
+  expect_error(
+    krona_like_pq(
+      data_fungi_mini,
+      interactive = FALSE,
+      ranks = c("Order", "Family", "Genus"),
+      label_size = c(1, 2),
+      check_nestedness = FALSE
+    ),
+    "unsupported length"
+  )
+})
+
+test_that("label_size must be positive and finite", {
+  expect_error(
+    krona_like_pq(
+      data_fungi_mini,
+      interactive = FALSE,
+      label_size = -1,
+      check_nestedness = FALSE
+    ),
+    "positive"
+  )
+})
+
+test_that(".assign_size_by_taxon sets internal nodes to the descendant-leaf mean", {
+  node <- list(
+    name = "All",
+    depth = 0,
+    children = list(
+      list(
+        name = "Amanita",
+        depth = 1,
+        children = list(
+          list(name = "muscaria", depth = 2, children = list()),
+          list(name = "phalloides", depth = 2, children = list())
+        )
+      )
+    )
+  )
+  tt <- data.frame(
+    Genus = c("Amanita", "Amanita", "Amanita"),
+    Species = c("muscaria", "muscaria", "phalloides"),
+    stringsAsFactors = FALSE
+  )
+  # muscaria has taxa (2, 4) -> mean 3; phalloides has taxon 10.
+  sizes <- c(2, 4, 10)
+  out <- ggplotpq:::.assign_size_by_taxon(
+    node,
+    tt,
+    c("Genus", "Species"),
+    sizes,
+    character()
+  )$node
+  sp <- out$children[[1]]$children
+  expect_equal(sp[[1]]$size_mult, 3) # mean(2, 4)
+  expect_equal(sp[[2]]$size_mult, 10)
+  # internal Amanita = mean of its two leaves (3, 10)
+  expect_equal(out$children[[1]]$size_mult, 6.5)
+})
+
 # ---- interactive path (guarded) --------------------------------------------
 
 test_that("interactive = TRUE returns htmlwidget (requires htmlwidgets)", {
@@ -573,6 +733,70 @@ test_that("label_orientation = 'tangential' centres every label (no aes hjust)",
   )
   lays <- .label_text_layers(p)
   expect_false(any(vapply(lays, .maps_hjust, logical(1))))
+})
+
+# Total number of section labels actually drawn across all text layers.
+.n_drawn_labels <- function(p) {
+  sum(vapply(.label_text_layers(p), function(l) nrow(l$data), integer(1)))
+}
+
+test_that("option1/option2/option3 alias tangential/mixed/auto", {
+  aliases <- list(
+    c("option1", "tangential"),
+    c("option2", "mixed"),
+    c("option3", "auto")
+  )
+  for (pair in aliases) {
+    p_new <- krona_like_pq(
+      data_fungi_mini,
+      interactive = FALSE,
+      label_orientation = pair[[1]],
+      check_nestedness = FALSE
+    )
+    p_old <- krona_like_pq(
+      data_fungi_mini,
+      interactive = FALSE,
+      label_orientation = pair[[2]],
+      check_nestedness = FALSE
+    )
+    maps_new <- vapply(.label_text_layers(p_new), .maps_hjust, logical(1))
+    maps_old <- vapply(.label_text_layers(p_old), .maps_hjust, logical(1))
+    expect_identical(sort(maps_new), sort(maps_old))
+    expect_identical(.n_drawn_labels(p_new), .n_drawn_labels(p_old))
+  }
+})
+
+test_that("truncate_labels shows at least as many arc-following labels", {
+  p_on <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "option1",
+    truncate_labels = TRUE,
+    check_nestedness = FALSE
+  )
+  p_off <- krona_like_pq(
+    data_fungi_mini,
+    interactive = FALSE,
+    label_orientation = "option1",
+    truncate_labels = FALSE,
+    check_nestedness = FALSE
+  )
+  expect_gt(.n_drawn_labels(p_on), .n_drawn_labels(p_off))
+  # A truncated label carries the ellipsis and never exceeds the original name.
+  labs <- unlist(lapply(.label_text_layers(p_on), function(l) l$data$lab))
+  expect_true(any(grepl("\\.\\.\\.", labs)))
+})
+
+test_that("truncate_labels must be a single logical", {
+  expect_error(
+    krona_like_pq(
+      data_fungi_mini,
+      interactive = FALSE,
+      truncate_labels = "yes",
+      check_nestedness = FALSE
+    ),
+    "truncate_labels"
+  )
 })
 
 test_that("label_orientation = 'auto' centres internal labels, anchors leaf labels by side", {

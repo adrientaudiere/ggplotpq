@@ -349,6 +349,10 @@ HTMLWidgets.widget({
       var maxDepth = state ? state.maxDepth : 99;
       var fontSize = state ? state.fontSize : 9;
       var colorBy  = state ? state.colorBy  : (opts.defaultColorBy || "");
+      // When false (the default), labels are never abbreviated with an
+      // ellipsis: a real label shows its full name and a name that does not
+      // fit is dropped to a dot rather than middle-truncated.
+      var truncateLabels = opts.truncateLabels === true;
 
       // Enforce a minimum size so the chart is readable. Leaf labels sit
       // outside the rim by default (see LEAF_PAD below), so a fixed margin
@@ -362,8 +366,36 @@ HTMLWidgets.widget({
         .attr("height", h)
         .style("font-family", "sans-serif");
 
+      // Transparent full-canvas background behind the pie. Because the wedge
+      // paths are drawn on top (in `g`, appended after this rect), a wedge
+      // still receives its own hover; only genuine empty space -- the centre
+      // hole, inter-wedge gaps, and everything outside the rim -- hits this
+      // rect. Hovering it resets the info panel to the CURRENT VIEW's root
+      // (`focus`, which follows zooming) instead of leaving the panel stuck on
+      // the last wedge that was hovered.
+      svg.append("rect")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("width", w)
+        .attr("height", h)
+        .style("fill", "none")
+        .style("pointer-events", "all")
+        .on("mouseover", function () {
+          var panel = el.querySelector("[data-krona-panel='info']");
+          if (panel) {
+            updateInfoPanel(panel, focus, root);
+          }
+        });
+
+      // Centre the pie in the canvas: horizontally on the full width, and
+      // vertically within the space below the toolbar reserve, so it stays
+      // centred whatever the (full-screen) aspect ratio is instead of being
+      // anchored to the top-left by a radius-based offset.
+      var topReserve = 42;
+      var cx = w / 2;
+      var cy = topReserve + (h - topReserve) / 2;
       var g = svg.append("g")
-        .attr("transform", "translate(" + (radius + 4) + "," + (radius + 42) + ")");
+        .attr("transform", "translate(" + cx + "," + cy + ")");
 
       root = d3.hierarchy(data)
         .sum(function (d) {
@@ -567,9 +599,24 @@ HTMLWidgets.widget({
           d._room = leaf ? 40 : Math.max(4, Math.floor(
             (ry(d.y1) - ry(d.y0)) / (fontSize * 0.62)
           ));
+          // With truncation off a spoke (radial) label is shown only when its
+          // full name fits the radial room; otherwise it is dropped to a dot
+          // rather than overflowing (a long internal spoke would otherwise run
+          // across the centre hole). Tangential labels always test their full
+          // length against the arc, so they need no extra room check.
+          var radialRoomOk = truncateLabels || d.data.name.length <= d._room;
           if (leaf) {
-            if (radialFits(arcw, rMid)) {
+            if (radialFits(arcw, rMid) && radialRoomOk) {
               d._role = "radial";
+              // A leaf spoke normally sits just outside the rim. But when a
+              // leaf occupies a wide arc -- typically after zooming into its
+              // parent (the second-to-last rank), where the leaf child fills
+              // the ring -- that outside anchor falls beyond the visible
+              // circle. Anchor the spoke INSIDE the leaf's own band so its
+              // name reads within the arc instead of being clipped off-screen.
+              if (arcw >= 1.2) {
+                d._r = (ry(d.y0) + radius) / 2;
+              }
               labelCands.push(d);
             } else if (tangentialFits(d.data.name, arcw, rMid)) {
               d._role = "tangential";
@@ -581,7 +628,7 @@ HTMLWidgets.widget({
           } else if (tangentialFits(d.data.name, arcw, rMid)) {
             d._role = "tangential";
             labelCands.push(d);
-          } else if (radialFits(arcw, rMid)) {
+          } else if (radialFits(arcw, rMid) && radialRoomOk) {
             d._role = "radial";
             labelCands.push(d);
           } else {
@@ -598,7 +645,8 @@ HTMLWidgets.widget({
         labelSel
           .style("display", function (d) { return inSubtree.has(d) ? null : "none"; })
           .style("font-size", function (d) {
-            return (d._role === "dot" ? fontSize + 2 : fontSize) + "px";
+            var mult = (d.data && d.data.size_mult) ? d.data.size_mult : 1;
+            return (d._role === "dot" ? fontSize + 2 : fontSize * mult) + "px";
           })
           .style("fill", function (d) {
             if (d._role === "dot") {
@@ -608,7 +656,7 @@ HTMLWidgets.widget({
           })
           .text(function (d) {
             if (d._role === "dot") return "·";
-            return shortenMid(d.data.name, d._room);
+            return truncateLabels ? shortenMid(d.data.name, d._room) : d.data.name;
           })
           .attr("text-anchor", function (d) {
             if (d._role === "tangential") return "middle";
@@ -677,27 +725,45 @@ HTMLWidgets.widget({
         // the focus becomes the blank hub around the centre count).
         var inSubtree = new Set(v.descendants());
         inSubtree.delete(v);
-        function focused(d) { return inSubtree.has(d); }
+        // Clicking a leaf (no descendants): show the leaf itself as a single
+        // full 100% disc with its name in the centre, rather than an empty
+        // ring. Otherwise the focus node stays the blank hub and only its
+        // descendants are drawn.
+        var leafFocus = inSubtree.size === 0;
+        function focused(d) {
+          return inSubtree.has(d) || (leafFocus && d === v);
+        }
 
         g.selectAll("path")
           .style("display", function (d) { return focused(d) ? null : "none"; })
           .style("pointer-events", function (d) { return focused(d) ? null : "none"; })
           .transition().duration(550)
           .attrTween("d", function (d) {
+            var target = (leafFocus && d === v)
+              ? { x0: 0, x1: 2 * Math.PI, y0: 0, y1: radius }
+              : {
+                  x0: ((d.x0 - x0) / angle) * 2 * Math.PI,
+                  x1: ((d.x1 - x0) / angle) * 2 * Math.PI,
+                  y0: ry(d.y0),
+                  y1: ry(d.y1)
+                };
             var i = d3.interpolate(
               { x0: d.x0, x1: d.x1, y0: d.y0, y1: d.y1 },
-              {
-                x0: ((d.x0 - x0) / angle) * 2 * Math.PI,
-                x1: ((d.x1 - x0) / angle) * 2 * Math.PI,
-                y0: ry(d.y0),
-                y1: ry(d.y1)
-              }
+              target
             );
             return function (t) { return arc(i(t)); };
           });
         classifyLabels(v);
         if (centerLabel) {
-          centerLabel.text("n = " + cgpmFmt(v.value));
+          if (leafFocus) {
+            centerLabel.text(v.data.name)
+              .style("font-size", (fontSize + 5) + "px")
+              .style("fill", "#111");
+          } else {
+            centerLabel.text("n = " + cgpmFmt(v.value))
+              .style("font-size", "12px")
+              .style("fill", "#333");
+          }
         }
       }
 
@@ -739,6 +805,10 @@ HTMLWidgets.widget({
       var maxDepth = state ? state.maxDepth : 99;
       var fontSize = state ? state.fontSize : 9;
       var colorBy  = state ? state.colorBy  : (opts.defaultColorBy || "");
+      // When false (the default), labels are never abbreviated with an
+      // ellipsis: a real label shows its full name and a name that does not
+      // fit is dropped to a dot rather than middle-truncated.
+      var truncateLabels = opts.truncateLabels === true;
 
       var innerW = Math.max(120, w - 8);
       var innerH = Math.max(120, h - 44);
@@ -779,13 +849,14 @@ HTMLWidgets.widget({
         return !d.children || d.children.length === 0;
       });
 
-      // Helper: truncate label to fit cell width.
+      // Helper: fit a label to the cell width. With truncation off, the full
+      // name is shown when it fits and nothing otherwise (never abbreviated).
       function tmLabel(name, cw, fs) {
         if (cw < 20) return "";
         var maxCh = Math.floor((cw - 6) / (fs * 0.62));
         if (maxCh < 2) return "";
-        return name.length <= maxCh ? name
-          : name.slice(0, Math.max(1, maxCh - 1)) + "…";
+        if (name.length <= maxCh) return name;
+        return truncateLabels ? name.slice(0, Math.max(1, maxCh - 1)) + "…" : "";
       }
 
       var node = g.selectAll("g.cell")
@@ -837,7 +908,10 @@ HTMLWidgets.widget({
         .append("text")
         .attr("class", "cell-leaf-label")
         .attr("x", 4).attr("y", fontSize + 2)
-        .style("font-size", fontSize + "px")
+        .style("font-size", function (d) {
+          var mult = (d.data && d.data.size_mult) ? d.data.size_mult : 1;
+          return (fontSize * mult) + "px";
+        })
         .style("font-weight", "600")
         .style("fill", "#111")
         .style("pointer-events", "none")

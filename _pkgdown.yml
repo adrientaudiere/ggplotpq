@@ -54,6 +54,7 @@ reference:
   - title: "New single-phyloseq analysis wrappers"
     desc: "Analysis wrappers that ship a ggplot (the analysis lives here, the plot is the deliverable)."
     contents:
+      - plot_samples_dist2ref_pq
       - neg_control_diag_pq
   - title: "Workflow tracking"
     desc: "Helpers to visualise workflow tracking output from MiscMetabar."

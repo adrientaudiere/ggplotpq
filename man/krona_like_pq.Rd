@@ -21,8 +21,12 @@ krona_like_pq(
   min_prop = NULL,
   collapse_single = FALSE,
   show_collapsed_path = FALSE,
+  abbrev_species = FALSE,
+  label_size = NULL,
   grey_terms = c(NA_character_, "unassigned", "unknown"),
-  label_orientation = c("auto", "tangential", "radial", "mixed", "adaptive"),
+  label_orientation = c("auto", "option1", "option2", "option3", "tangential", "radial",
+    "mixed", "adaptive"),
+  truncate_labels = FALSE,
   dismiss_overlaps = TRUE,
   label_fallback = c("dot", "initials", "none", "legend"),
   fallback_symbol = "·",
@@ -144,33 +148,68 @@ the skipped intermediate ranks joined by \code{" / "} and prefixed to the node
 name (e.g. \code{"Stereaceae / Stereum"}) -- drawn in grey so the merged ranks
 remain visible.}
 
+\item{abbrev_species}{(logical, default \code{FALSE}) When \code{TRUE}, each name at
+the \code{"Species"} rank is prefixed with the initial of its parent genus, so
+a species epithet reads as an abbreviated binomial (e.g. \code{"muscaria"}
+under genus \code{"Amanita"} becomes \code{"A. muscaria"}). Applies to both the
+static and interactive plots. Placeholder names (\code{"unassigned"}) and names
+already carrying an initial are left untouched; if no \code{"Species"} rank is
+among \code{ranks}, a warning is issued and names are unchanged.}
+
+\item{label_size}{(numeric, default \code{NULL}) A positive multiplier on the
+base label font size, applied to both the static and interactive plots.
+Its length selects the mode:
+\itemize{
+\item length \code{1} -- a single multiplier for every label.
+\item length \code{length(ranks)} -- one multiplier per rank; a label at rank \code{i}
+uses \code{label_size[i]}.
+\item length \code{ntaxa(physeq)} -- one value per taxon, positional in
+\code{taxa_names()} order. Each leaf's multiplier is the mean of its
+constituent taxa's values, and each internal node's is the mean of all
+its descendant leaves' multipliers.
+\code{NULL} keeps the default sizing. Values must be finite and \verb{> 0}.
+}}
+
 \item{grey_terms}{(character, default \code{c(NA, "unassigned", "unknown")})
 Section names whose colour is overridden to grey, used to visually mute
 uninformative taxa. \code{NA} matches sections with a missing name. Pass
 \code{character(0)} to disable.}
 
 \item{label_orientation}{(character, default \code{"auto"}) Static sunburst
-only. Controls how section labels are placed.
+only. Controls how section labels are placed. The three documented modes
+are \code{"option1"}, \code{"option2"}, and \code{"option3"}; the older names are kept
+as aliases.
 \itemize{
-\item \code{"auto"} / \code{"radial"}: \strong{internal} labels run \strong{along their own ring
-band} (arc-following, never upside-down), centred; \strong{leaf} labels
-are \strong{radial}, a spoke reading straight outward from the centre,
-placed outside the coloured arc by \code{leaf_label_padding} (\code{"radial"}
-differs from \code{"auto"} only in historical naming -- both place leaf
-labels outside the rim by default now).
-\item \code{"tangential"}: every label (internal and leaf) runs along its arc,
-centred in the band, shown only when the name fits.
-\item \code{"mixed"}: \strong{internal} labels are tangential (circular); \strong{leaf}
-labels are radial, outside the rim like above.
-\item \code{"adaptive"}: every label (internal and leaf) tries the radial
-placement first and falls back to tangential only when radial does not
-fit the arc.
+\item \code{"option3"} / \code{"auto"} (default): \strong{internal} labels run \strong{along their
+own ring band} (arc-following, never upside-down), centred; \strong{leaf}
+labels are \strong{radial}, a spoke reading straight outward from the
+centre, placed outside the coloured arc by \code{leaf_label_padding}, with
+crowded leaves thinned by \code{dismiss_overlaps}. \code{"radial"} is a further
+alias of this mode.
+\item \code{"option1"} / \code{"tangential"}: \strong{every} label (internal and leaf) runs
+along its arc, centred in the band. Long labels are shortened to fit
+with \code{truncate_labels}; a name still too wide for its arc is hidden
+(replaced by the \code{label_fallback} marker).
+\item \code{"option2"} / \code{"mixed"}: \strong{internal} labels are tangential (circular);
+\strong{leaf} labels are radial, outside the rim like \code{"option3"}.
+\item \code{"adaptive"}: every label tries the radial placement first and falls
+back to tangential only when radial does not fit the arc.
 In every mode, a label with nowhere to go gets the \code{label_fallback}
 marker; see \code{dismiss_overlaps} for thinning crowded radial labels and
 \code{leaf_label_padding} for how far outside the rim leaf labels sit.
-The interactive widget mirrors this for its default styling (internal
-arc-following, leaf radial), but does not expose all five modes.
+The interactive widget mirrors the default styling (internal
+arc-following, leaf radial), but does not expose these modes.
 }}
+
+\item{truncate_labels}{(logical, default \code{FALSE}) Applies to the static
+sunburst and the interactive widget. Controls whether labels may be
+abbreviated with a middle ellipsis. When \code{TRUE}, a label too long for its
+space is shortened so it still fits and stays visible (e.g.
+\code{"Strophariaceae"} becomes \code{"Stro...aceae"}). When \code{FALSE} (the default),
+labels are never abbreviated: a name is shown in full when it fits, and an
+arc-following name too long for its arc is hidden (its wedge gets the
+\code{label_fallback} marker) rather than truncated. Pair \code{FALSE} with
+\code{label_size} to shrink the text until full names fit.}
 
 \item{dismiss_overlaps}{(logical, default \code{TRUE}) Static sunburst only.
 Radially-oriented labels are anchored at a single point and can visually
@@ -236,10 +275,12 @@ via \code{\link[htmlwidgets:saveWidget]{htmlwidgets::saveWidget()}}. The widget 
 Ignored when \code{interactive = FALSE}.}
 
 \item{width, height}{(numeric, default \code{NULL}) Widget dimensions in pixels.
-When \code{width} is \code{NULL}, the widget fills its container (RStudio viewer /
-Shiny); when \code{height} is \code{NULL}, it defaults to \code{900} -- the widget is
-meant to be viewed full-screen, and a shorter default leaves too little
-room for the dense label layout. Ignored when \code{interactive = FALSE}.}
+Both default to \code{NULL}, in which case the widget \strong{fills its container}:
+the whole browser window for a standalone \code{.html}, the whole RStudio
+viewer pane, and the full viewport height elsewhere -- the widget is meant
+to be viewed full-screen and the dense label layout needs the room. Pass
+explicit pixel values to fix the size instead. Ignored when
+\code{interactive = FALSE}.}
 }
 \value{
 When \code{interactive = TRUE}, an \code{htmlwidget} object (invisibly if
