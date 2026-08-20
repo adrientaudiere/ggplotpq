@@ -149,6 +149,8 @@ palettes).
 Analysis wrappers that ship a ggplot (the analysis lives here, the plot
 is the deliverable).
 
+- [`plot_samples_dist2ref_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_samples_dist2ref_pq.md)
+  : Distance of every sample to a reference (control) sample set
 - [`neg_control_diag_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/neg_control_diag_pq.md)
   : Diagnose contamination from negative controls
 

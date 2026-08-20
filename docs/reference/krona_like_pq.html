@@ -61,7 +61,7 @@ works on all platforms because it bundles D3.js locally."><meta property="og:ima
 
     <a class="navbar-brand me-2" href="../index.html">ggplotpq</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.2.0.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -132,8 +132,12 @@ works on all platforms because it bundles D3.js locally.</p>
 <span>  min_prop <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  collapse_single <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  show_collapsed_path <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  abbrev_species <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  label_size <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  grey_terms <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="cn">NA_character_</span>, <span class="st">"unassigned"</span>, <span class="st">"unknown"</span><span class="op">)</span>,</span>
-<span>  label_orientation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"tangential"</span>, <span class="st">"radial"</span>, <span class="st">"mixed"</span>, <span class="st">"adaptive"</span><span class="op">)</span>,</span>
+<span>  label_orientation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"option1"</span>, <span class="st">"option2"</span>, <span class="st">"option3"</span>, <span class="st">"tangential"</span>, <span class="st">"radial"</span>,</span>
+<span>    <span class="st">"mixed"</span>, <span class="st">"adaptive"</span><span class="op">)</span>,</span>
+<span>  truncate_labels <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  dismiss_overlaps <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  label_fallback <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"dot"</span>, <span class="st">"initials"</span>, <span class="st">"none"</span>, <span class="st">"legend"</span><span class="op">)</span>,</span>
 <span>  fallback_symbol <span class="op">=</span> <span class="st">"·"</span>,</span>
@@ -289,6 +293,30 @@ name (e.g. <code>"Stereaceae / Stereum"</code>) – drawn in grey so the merged 
 remain visible.</p></dd>
 
 
+<dt id="arg-abbrev-species">abbrev_species<a class="anchor" aria-label="anchor" href="#arg-abbrev-species"></a></dt>
+<dd><p>(logical, default <code>FALSE</code>) When <code>TRUE</code>, each name at
+the <code>"Species"</code> rank is prefixed with the initial of its parent genus, so
+a species epithet reads as an abbreviated binomial (e.g. <code>"muscaria"</code>
+under genus <code>"Amanita"</code> becomes <code>"A. muscaria"</code>). Applies to both the
+static and interactive plots. Placeholder names (<code>"unassigned"</code>) and names
+already carrying an initial are left untouched; if no <code>"Species"</code> rank is
+among <code>ranks</code>, a warning is issued and names are unchanged.</p></dd>
+
+
+<dt id="arg-label-size">label_size<a class="anchor" aria-label="anchor" href="#arg-label-size"></a></dt>
+<dd><p>(numeric, default <code>NULL</code>) A positive multiplier on the
+base label font size, applied to both the static and interactive plots.
+Its length selects the mode:</p><ul><li><p>length <code>1</code> – a single multiplier for every label.</p></li>
+<li><p>length <code>length(ranks)</code> – one multiplier per rank; a label at rank <code>i</code>
+uses <code>label_size[i]</code>.</p></li>
+<li><p>length <code>ntaxa(physeq)</code> – one value per taxon, positional in
+<code>taxa_names()</code> order. Each leaf's multiplier is the mean of its
+constituent taxa's values, and each internal node's is the mean of all
+its descendant leaves' multipliers.
+<code>NULL</code> keeps the default sizing. Values must be finite and <code>&gt; 0</code>.</p></li>
+</ul></dd>
+
+
 <dt id="arg-grey-terms">grey_terms<a class="anchor" aria-label="anchor" href="#arg-grey-terms"></a></dt>
 <dd><p>(character, default <code>c(NA, "unassigned", "unknown")</code>)
 Section names whose colour is overridden to grey, used to visually mute
@@ -298,25 +326,40 @@ uninformative taxa. <code>NA</code> matches sections with a missing name. Pass
 
 <dt id="arg-label-orientation">label_orientation<a class="anchor" aria-label="anchor" href="#arg-label-orientation"></a></dt>
 <dd><p>(character, default <code>"auto"</code>) Static sunburst
-only. Controls how section labels are placed.</p><ul><li><p><code>"auto"</code> / <code>"radial"</code>: <strong>internal</strong> labels run <strong>along their own ring
-band</strong> (arc-following, never upside-down), centred; <strong>leaf</strong> labels
-are <strong>radial</strong>, a spoke reading straight outward from the centre,
-placed outside the coloured arc by <code>leaf_label_padding</code> (<code>"radial"</code>
-differs from <code>"auto"</code> only in historical naming – both place leaf
-labels outside the rim by default now).</p></li>
-<li><p><code>"tangential"</code>: every label (internal and leaf) runs along its arc,
-centred in the band, shown only when the name fits.</p></li>
-<li><p><code>"mixed"</code>: <strong>internal</strong> labels are tangential (circular); <strong>leaf</strong>
-labels are radial, outside the rim like above.</p></li>
-<li><p><code>"adaptive"</code>: every label (internal and leaf) tries the radial
-placement first and falls back to tangential only when radial does not
-fit the arc.
+only. Controls how section labels are placed. The three documented modes
+are <code>"option1"</code>, <code>"option2"</code>, and <code>"option3"</code>; the older names are kept
+as aliases.</p><ul><li><p><code>"option3"</code> / <code>"auto"</code> (default): <strong>internal</strong> labels run <strong>along their
+own ring band</strong> (arc-following, never upside-down), centred; <strong>leaf</strong>
+labels are <strong>radial</strong>, a spoke reading straight outward from the
+centre, placed outside the coloured arc by <code>leaf_label_padding</code>, with
+crowded leaves thinned by <code>dismiss_overlaps</code>. <code>"radial"</code> is a further
+alias of this mode.</p></li>
+<li><p><code>"option1"</code> / <code>"tangential"</code>: <strong>every</strong> label (internal and leaf) runs
+along its arc, centred in the band. Long labels are shortened to fit
+with <code>truncate_labels</code>; a name still too wide for its arc is hidden
+(replaced by the <code>label_fallback</code> marker).</p></li>
+<li><p><code>"option2"</code> / <code>"mixed"</code>: <strong>internal</strong> labels are tangential (circular);
+<strong>leaf</strong> labels are radial, outside the rim like <code>"option3"</code>.</p></li>
+<li><p><code>"adaptive"</code>: every label tries the radial placement first and falls
+back to tangential only when radial does not fit the arc.
 In every mode, a label with nowhere to go gets the <code>label_fallback</code>
 marker; see <code>dismiss_overlaps</code> for thinning crowded radial labels and
 <code>leaf_label_padding</code> for how far outside the rim leaf labels sit.
-The interactive widget mirrors this for its default styling (internal
-arc-following, leaf radial), but does not expose all five modes.</p></li>
+The interactive widget mirrors the default styling (internal
+arc-following, leaf radial), but does not expose these modes.</p></li>
 </ul></dd>
+
+
+<dt id="arg-truncate-labels">truncate_labels<a class="anchor" aria-label="anchor" href="#arg-truncate-labels"></a></dt>
+<dd><p>(logical, default <code>FALSE</code>) Applies to the static
+sunburst and the interactive widget. Controls whether labels may be
+abbreviated with a middle ellipsis. When <code>TRUE</code>, a label too long for its
+space is shortened so it still fits and stays visible (e.g.
+<code>"Strophariaceae"</code> becomes <code>"Stro...aceae"</code>). When <code>FALSE</code> (the default),
+labels are never abbreviated: a name is shown in full when it fits, and an
+arc-following name too long for its arc is hidden (its wedge gets the
+<code>label_fallback</code> marker) rather than truncated. Pair <code>FALSE</code> with
+<code>label_size</code> to shrink the text until full names fit.</p></dd>
 
 
 <dt id="arg-dismiss-overlaps">dismiss_overlaps<a class="anchor" aria-label="anchor" href="#arg-dismiss-overlaps"></a></dt>
@@ -402,10 +445,12 @@ Ignored when <code>interactive = FALSE</code>.</p></dd>
 
 <dt id="arg-width-height">width, height<a class="anchor" aria-label="anchor" href="#arg-width-height"></a></dt>
 <dd><p>(numeric, default <code>NULL</code>) Widget dimensions in pixels.
-When <code>width</code> is <code>NULL</code>, the widget fills its container (RStudio viewer /
-Shiny); when <code>height</code> is <code>NULL</code>, it defaults to <code>900</code> – the widget is
-meant to be viewed full-screen, and a shorter default leaves too little
-room for the dense label layout. Ignored when <code>interactive = FALSE</code>.</p></dd>
+Both default to <code>NULL</code>, in which case the widget <strong>fills its container</strong>:
+the whole browser window for a standalone <code>.html</code>, the whole RStudio
+viewer pane, and the full viewport height elsewhere – the widget is meant
+to be viewed full-screen and the dense label layout needs the room. Pass
+explicit pixel values to fix the size instead. Ignored when
+<code>interactive = FALSE</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

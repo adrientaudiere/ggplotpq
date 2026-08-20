@@ -54,8 +54,12 @@ krona_like_pq(
   min_prop = NULL,
   collapse_single = FALSE,
   show_collapsed_path = FALSE,
+  abbrev_species = FALSE,
+  label_size = NULL,
   grey_terms = c(NA_character_, "unassigned", "unknown"),
-  label_orientation = c("auto", "tangential", "radial", "mixed", "adaptive"),
+  label_orientation = c("auto", "option1", "option2", "option3", "tangential", "radial",
+    "mixed", "adaptive"),
+  truncate_labels = FALSE,
   dismiss_overlaps = TRUE,
   label_fallback = c("dot", "initials", "none", "legend"),
   fallback_symbol = "·",
@@ -219,6 +223,33 @@ krona_like_pq(
   name (e.g. `"Stereaceae / Stereum"`) – drawn in grey so the merged
   ranks remain visible.
 
+- abbrev_species:
+
+  (logical, default `FALSE`) When `TRUE`, each name at the `"Species"`
+  rank is prefixed with the initial of its parent genus, so a species
+  epithet reads as an abbreviated binomial (e.g. `"muscaria"` under
+  genus `"Amanita"` becomes `"A. muscaria"`). Applies to both the static
+  and interactive plots. Placeholder names (`"unassigned"`) and names
+  already carrying an initial are left untouched; if no `"Species"` rank
+  is among `ranks`, a warning is issued and names are unchanged.
+
+- label_size:
+
+  (numeric, default `NULL`) A positive multiplier on the base label font
+  size, applied to both the static and interactive plots. Its length
+  selects the mode:
+
+  - length `1` – a single multiplier for every label.
+
+  - length `length(ranks)` – one multiplier per rank; a label at rank
+    `i` uses `label_size[i]`.
+
+  - length `ntaxa(physeq)` – one value per taxon, positional in
+    `taxa_names()` order. Each leaf's multiplier is the mean of its
+    constituent taxa's values, and each internal node's is the mean of
+    all its descendant leaves' multipliers. `NULL` keeps the default
+    sizing. Values must be finite and `> 0`.
+
 - grey_terms:
 
   (character, default `c(NA, "unassigned", "unknown")`) Section names
@@ -229,29 +260,44 @@ krona_like_pq(
 - label_orientation:
 
   (character, default `"auto"`) Static sunburst only. Controls how
-  section labels are placed.
+  section labels are placed. The three documented modes are `"option1"`,
+  `"option2"`, and `"option3"`; the older names are kept as aliases.
 
-  - `"auto"` / `"radial"`: **internal** labels run **along their own
-    ring band** (arc-following, never upside-down), centred; **leaf**
-    labels are **radial**, a spoke reading straight outward from the
-    centre, placed outside the coloured arc by `leaf_label_padding`
-    (`"radial"` differs from `"auto"` only in historical naming – both
-    place leaf labels outside the rim by default now).
+  - `"option3"` / `"auto"` (default): **internal** labels run **along
+    their own ring band** (arc-following, never upside-down), centred;
+    **leaf** labels are **radial**, a spoke reading straight outward
+    from the centre, placed outside the coloured arc by
+    `leaf_label_padding`, with crowded leaves thinned by
+    `dismiss_overlaps`. `"radial"` is a further alias of this mode.
 
-  - `"tangential"`: every label (internal and leaf) runs along its arc,
-    centred in the band, shown only when the name fits.
+  - `"option1"` / `"tangential"`: **every** label (internal and leaf)
+    runs along its arc, centred in the band. Long labels are shortened
+    to fit with `truncate_labels`; a name still too wide for its arc is
+    hidden (replaced by the `label_fallback` marker).
 
-  - `"mixed"`: **internal** labels are tangential (circular); **leaf**
-    labels are radial, outside the rim like above.
+  - `"option2"` / `"mixed"`: **internal** labels are tangential
+    (circular); **leaf** labels are radial, outside the rim like
+    `"option3"`.
 
-  - `"adaptive"`: every label (internal and leaf) tries the radial
-    placement first and falls back to tangential only when radial does
-    not fit the arc. In every mode, a label with nowhere to go gets the
-    `label_fallback` marker; see `dismiss_overlaps` for thinning crowded
-    radial labels and `leaf_label_padding` for how far outside the rim
-    leaf labels sit. The interactive widget mirrors this for its default
-    styling (internal arc-following, leaf radial), but does not expose
-    all five modes.
+  - `"adaptive"`: every label tries the radial placement first and falls
+    back to tangential only when radial does not fit the arc. In every
+    mode, a label with nowhere to go gets the `label_fallback` marker;
+    see `dismiss_overlaps` for thinning crowded radial labels and
+    `leaf_label_padding` for how far outside the rim leaf labels sit.
+    The interactive widget mirrors the default styling (internal
+    arc-following, leaf radial), but does not expose these modes.
+
+- truncate_labels:
+
+  (logical, default `FALSE`) Applies to the static sunburst and the
+  interactive widget. Controls whether labels may be abbreviated with a
+  middle ellipsis. When `TRUE`, a label too long for its space is
+  shortened so it still fits and stays visible (e.g. `"Strophariaceae"`
+  becomes `"Stro...aceae"`). When `FALSE` (the default), labels are
+  never abbreviated: a name is shown in full when it fits, and an
+  arc-following name too long for its arc is hidden (its wedge gets the
+  `label_fallback` marker) rather than truncated. Pair `FALSE` with
+  `label_size` to shrink the text until full names fit.
 
 - dismiss_overlaps:
 
@@ -339,11 +385,13 @@ krona_like_pq(
 
 - width, height:
 
-  (numeric, default `NULL`) Widget dimensions in pixels. When `width` is
-  `NULL`, the widget fills its container (RStudio viewer / Shiny); when
-  `height` is `NULL`, it defaults to `900` – the widget is meant to be
-  viewed full-screen, and a shorter default leaves too little room for
-  the dense label layout. Ignored when `interactive = FALSE`.
+  (numeric, default `NULL`) Widget dimensions in pixels. Both default to
+  `NULL`, in which case the widget **fills its container**: the whole
+  browser window for a standalone `.html`, the whole RStudio viewer
+  pane, and the full viewport height elsewhere – the widget is meant to
+  be viewed full-screen and the dense label layout needs the room. Pass
+  explicit pixel values to fix the size instead. Ignored when
+  `interactive = FALSE`.
 
 ## Value
 

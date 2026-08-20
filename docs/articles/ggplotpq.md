@@ -18,11 +18,13 @@ host the analysis.
 ## Installation
 
 ``` r
+
 # install.packages("remotes")
 remotes::install_github("adrientaudiere/ggplotpq")
 ```
 
 ``` r
+
 library(ggplotpq)
 library(ggplot2)
 data(data_fungi_mini, package = "MiscMetabar")
@@ -35,6 +37,7 @@ summarises sequencing depth across samples — a quick first diagnostic
 before any rarefaction or normalisation.
 
 ``` r
+
 plot_sample_depth_pq(data_fungi_mini)
 ```
 
@@ -45,6 +48,7 @@ shows the most abundant taxa across samples, at the taxonomic rank of
 your choice.
 
 ``` r
+
 plot_taxa_heatmap_pq(data_fungi_mini, n_top = 15, taxa_rank = "Family")
 ```
 
@@ -55,6 +59,7 @@ lays out taxa as bubbles sized by abundance and coloured by a taxonomic
 rank.
 
 ``` r
+
 gg_bubbles_pq(physeq = data_fungi_mini, rank_color = "Class")
 ```
 
@@ -68,6 +73,7 @@ plot, not only `phyloseq` ones.
 is a clean, publication-oriented theme:
 
 ``` r
+
 ggplot(mtcars, aes(wt, mpg)) +
   geom_point() +
   theme_pq_minimal()
@@ -78,6 +84,7 @@ ggplot(mtcars, aes(wt, mpg)) +
 The `scale_*_pq_discrete()` family gives curated discrete palettes:
 
 ``` r
+
 ggplot(mtcars, aes(wt, mpg, color = factor(cyl))) +
   geom_point(size = 2) +
   scale_color_pq_discrete("Picabia") +
