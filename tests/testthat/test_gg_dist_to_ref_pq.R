@@ -4,7 +4,11 @@ test_that("plot_samples_dist2ref_pq works with a single ref_sample", {
   data(data_fungi_mini, package = "MiscMetabar")
 
   ref <- phyloseq::sample_names(data_fungi_mini)[1]
-  res <- plot_samples_dist2ref_pq(data_fungi_mini, ref_sample = ref, fact = "Height")
+  res <- plot_samples_dist2ref_pq(
+    data_fungi_mini,
+    ref_sample = ref,
+    fact = "Height"
+  )
 
   expect_type(res, "list")
   expect_named(
@@ -43,7 +47,11 @@ test_that("plot_samples_dist2ref_pq ranks modalities from closest to farthest", 
   data(data_fungi_mini, package = "MiscMetabar")
 
   ref <- phyloseq::sample_names(data_fungi_mini)[1]
-  res <- plot_samples_dist2ref_pq(data_fungi_mini, ref_sample = ref, fact = "Height")
+  res <- plot_samples_dist2ref_pq(
+    data_fungi_mini,
+    ref_sample = ref,
+    fact = "Height"
+  )
 
   expect_true(all(diff(res$rank_table$dist_mean) >= 0))
   # rank_table is computed on non-reference samples only
@@ -195,7 +203,11 @@ test_that("plot_samples_dist2ref_pq plots render without error", {
   data(data_fungi_mini, package = "MiscMetabar")
 
   ref <- phyloseq::sample_names(data_fungi_mini)[1]
-  res <- plot_samples_dist2ref_pq(data_fungi_mini, ref_sample = ref, fact = "Height")
+  res <- plot_samples_dist2ref_pq(
+    data_fungi_mini,
+    ref_sample = ref,
+    fact = "Height"
+  )
 
   pdf(NULL)
   on.exit(dev.off())
