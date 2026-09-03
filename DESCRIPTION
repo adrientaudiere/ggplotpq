@@ -22,8 +22,10 @@ Depends:
 Imports:
     cli,
     dplyr,
+    farver (>= 2.1.2),
     lifecycle,
     methods,
+    patchwork,
     rlang,
     stats,
     tibble,
@@ -43,7 +45,7 @@ Suggests:
     knitr,
     maptiles,
     packcircles,
-    patchwork,
+    pbapply,
     purrr,
     RColorBrewer,
     rmarkdown,
@@ -62,4 +64,4 @@ Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 RdMacros: lifecycle
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.0

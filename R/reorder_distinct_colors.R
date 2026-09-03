@@ -1,3 +1,139 @@
+#' Alternate the lightness of consecutive colours
+#'
+#' Odd positions are lightened, even positions darkened, adding a luminance
+#' cue on top of hue differences.
+#'
+#' @param colors (character, required) Colours to modify.
+#' @param amount (numeric, required) Proportion to lighten or darken by.
+#' @param space (character, required) `"srgb"` operates on the raw sRGB
+#'   channels, which darkens a yellow and a blue by visibly different
+#'   amounts. `"oklch"` shifts perceptual lightness instead, so every colour
+#'   moves by the same perceived step, and reduces chroma where the result
+#'   would fall outside the sRGB gamut.
+#'
+#' @return A character vector of hex colours, same length as `colors`.
+#' @noRd
+.pq_alternate_lightness <- function(colors, amount, space) {
+  n <- length(colors)
+  sgn <- ifelse(seq_len(n) %% 2 == 0, -1, 1)
+
+  if (identical(space, "oklch")) {
+    m <- .pq_hex_oklch(colors)
+    m[, "l"] <- pmin(pmax(m[, "l"] + sgn * amount, 0), 1)
+    return(.pq_oklch_hex(m))
+  }
+
+  rgb_mat <- t(grDevices::col2rgb(colors)) / 255
+  for (i in seq_len(n)) {
+    if (sgn[i] < 0) {
+      rgb_mat[i, ] <- pmax(rgb_mat[i, ] * (1 - amount), 0)
+    } else {
+      rgb_mat[i, ] <- pmin(rgb_mat[i, ] + (1 - rgb_mat[i, ]) * amount, 1)
+    }
+  }
+  grDevices::rgb(rgb_mat[, 1], rgb_mat[, 2], rgb_mat[, 3])
+}
+
+#' Reassign a set of colours to maximise contrast between consecutive levels
+#'
+#' The permutation engine behind [reorder_distinct_colors()], operating on a
+#' bare named vector so that palette constructors can use it without building
+#' a ggplot first.
+#'
+#' Colours are placed greedily: start from the colour with the largest mean
+#' CIE Lab distance to all others, then repeatedly pick whichever unused
+#' colour is furthest from the one just placed. The **set** of colours is
+#' unchanged; only which level gets which colour changes.
+#'
+#' Note that this is a function of the whole level set: adding or removing a
+#' level changes the permutation. It therefore belongs to palette
+#' construction, applied once, and must never be applied at plot time, where
+#' it would break colour stability between figures.
+#'
+#' @param colors (character, required) Named vector of colours, one per level.
+#' @param alternate_lightness (logical, default `FALSE`) Add a luminance
+#'   alternation on top of the reordering.
+#' @param lightness_amount (numeric, default `0.15`) Intensity of that
+#'   alternation.
+#' @param colorblind (logical, default `FALSE`) Compute distances under
+#'   simulated deuteranopia.
+#' @param space (character, default `"srgb"`) Colour space for the lightness
+#'   alternation. See [.pq_alternate_lightness()].
+#'
+#' @return A character vector with the same names as `colors`, values
+#'   permuted.
+#' @noRd
+.pq_reorder_colors_vec <- function(
+  colors,
+  alternate_lightness = FALSE,
+  lightness_amount = 0.15,
+  colorblind = FALSE,
+  space = "srgb"
+) {
+  space <- rlang::arg_match0(space, c("srgb", "oklch"))
+  n <- length(colors)
+  if (n <= 1) {
+    return(colors)
+  }
+  nms <- names(colors)
+
+  # Convert hex to sRGB matrix (rows = colors, cols = R/G/B in [0,1])
+  rgb_mat <- t(grDevices::col2rgb(colors)) / 255
+
+  # Optionally simulate deuteranopia before computing distances
+  if (colorblind) {
+    # Brettel 1997 deuteranopia simulation matrix for sRGB
+    deutan_mat <- matrix(
+      c(
+        0.625,
+        0.375,
+        0.0,
+        0.7,
+        0.3,
+        0.0,
+        0.0,
+        0.3,
+        0.7
+      ),
+      nrow = 3,
+      byrow = TRUE
+    )
+    rgb_for_dist <- rgb_mat %*% t(deutan_mat)
+  } else {
+    rgb_for_dist <- rgb_mat
+  }
+
+  # Pairwise Euclidean distances in CIE Lab for perceptual distance
+  lab_mat <- grDevices::convertColor(rgb_for_dist, from = "sRGB", to = "Lab")
+  dist_mat <- as.matrix(stats::dist(lab_mat))
+
+  # Greedy reordering: start with the color having the largest mean distance
+  avg_dist <- rowMeans(dist_mat)
+  order_idx <- integer(n)
+  order_idx[1] <- which.max(avg_dist)
+  remaining <- setdiff(seq_len(n), order_idx[1])
+
+  for (i in 2:n) {
+    prev <- order_idx[i - 1]
+    dists_to_prev <- dist_mat[prev, remaining]
+    best <- which.max(dists_to_prev)
+    order_idx[i] <- remaining[best]
+    remaining <- setdiff(remaining, order_idx[i])
+  }
+
+  reordered_colors <- unname(colors)[order_idx]
+
+  if (alternate_lightness) {
+    reordered_colors <- .pq_alternate_lightness(
+      reordered_colors,
+      amount = lightness_amount,
+      space = space
+    )
+  }
+
+  stats::setNames(reordered_colors, nms)
+}
+
 #' Reorder fill and color scales to maximize perceptual contrast between
 #' adjacent segments
 #'
@@ -81,85 +217,15 @@ reorder_distinct_colors <- function(
 
   na_val <- fill_scale$na.value %||% "grey50"
   colors <- fill_scale$palette(n)
-  if (is.null(names(colors))) {
-    names(colors) <- levels
-  }
+  names(colors) <- levels
 
-  # Convert hex to sRGB matrix (rows = colors, cols = R/G/B in [0,1])
-  rgb_mat <- t(col2rgb(colors)) / 255
-
-  # Optionally simulate deuteranopia before computing distances
-  if (colorblind) {
-    # Brettel 1997 deuteranopia simulation matrix for sRGB
-    deutan_mat <- matrix(
-      c(
-        0.625,
-        0.375,
-        0.0,
-        0.7,
-        0.3,
-        0.0,
-        0.0,
-        0.3,
-        0.7
-      ),
-      nrow = 3,
-      byrow = TRUE
-    )
-    rgb_for_dist <- rgb_mat %*% t(deutan_mat)
-  } else {
-    rgb_for_dist <- rgb_mat
-  }
-
-  # Convert to CIE Lab for perceptual distance
-  lab_mat <- grDevices::convertColor(rgb_for_dist, from = "sRGB", to = "Lab")
-
-  # Pairwise Euclidean distances in Lab space
-  dist_mat <- as.matrix(stats::dist(lab_mat))
-
-  # Greedy reordering: start with the color having the largest mean distance
-  avg_dist <- rowMeans(dist_mat)
-  order_idx <- integer(n)
-  order_idx[1] <- which.max(avg_dist)
-  remaining <- setdiff(seq_len(n), order_idx[1])
-
-  for (i in 2:n) {
-    prev <- order_idx[i - 1]
-    dists_to_prev <- dist_mat[prev, remaining]
-    best <- which.max(dists_to_prev)
-    order_idx[i] <- remaining[best]
-    remaining <- setdiff(remaining, order_idx[i])
-  }
-
-  reordered_colors <- colors[order_idx]
-
-  # Optional: alternate lightness (darken even, lighten odd)
-  if (alternate_lightness) {
-    rgb_reordered <- t(col2rgb(reordered_colors)) / 255
-    for (i in seq_along(reordered_colors)) {
-      if (i %% 2 == 0) {
-        # Darken
-        rgb_reordered[i, ] <- pmax(
-          rgb_reordered[i, ] * (1 - lightness_amount),
-          0
-        )
-      } else {
-        # Lighten
-        rgb_reordered[i, ] <- pmin(
-          rgb_reordered[i, ] + (1 - rgb_reordered[i, ]) * lightness_amount,
-          1
-        )
-      }
-    }
-    reordered_colors <- rgb(
-      rgb_reordered[, 1],
-      rgb_reordered[, 2],
-      rgb_reordered[, 3]
-    )
-  }
-
-  # Build named vector: level -> reordered color
-  new_colors <- stats::setNames(reordered_colors, levels)
+  new_colors <- .pq_reorder_colors_vec(
+    colors,
+    alternate_lightness = alternate_lightness,
+    lightness_amount = lightness_amount,
+    colorblind = colorblind,
+    space = "srgb"
+  )
 
   # Remove existing fill scale and add the new one
   p$scales$scales <- p$scales$scales[

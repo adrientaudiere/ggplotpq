@@ -43,11 +43,15 @@ reference:
       - default_sharing_metrics
       - krona_like_pq
       - palette_earthtones
+      - palette_sam_pq
+      - palette_tax_pq
       - plot_sample_depth_pq
       - plot_tax_table_pq
       - plot_taxa_heatmap_pq
       - scale_color_pq_discrete
       - scale_fill_pq_discrete
+      - scale_fill_tax_pq
+      - show_palette_pq
       - ternary_biomarker_pq
       - ternary_pq
       - theme_pq_minimal
