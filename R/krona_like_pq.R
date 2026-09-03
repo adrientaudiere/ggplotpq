@@ -1165,7 +1165,7 @@ utils::globalVariables(c(
   truncate_labels = FALSE,
   dismiss_overlaps = TRUE,
   label_fallback = "dot",
-  fallback_symbol = "·",
+  fallback_symbol = "\u00b7",
   fallback_nchar = 3,
   leaf_label_padding = 0.08,
   use_gradient = FALSE,
@@ -1277,7 +1277,7 @@ utils::globalVariables(c(
           y = 0,
           label = paste0(
             "n = ",
-            format(round(total_weight), big.mark = "\u202f", scientific = FALSE)
+            format(round(total_weight), big.mark = " ", scientific = FALSE)
           ),
           size = 3,
           color = "#333333",
@@ -1675,7 +1675,7 @@ utils::globalVariables(c(
     if (!is.null(legend_df) && nrow(legend_df) > 0) {
       legend_df <- legend_df[order(legend_df$name), , drop = FALSE]
       legend_text <- paste(
-        paste(legend_df$key, legend_df$name, sep = " — "),
+        paste(legend_df$key, legend_df$name, sep = " \u2014 "),
         collapse = "\n"
       )
       p <- p +
@@ -2158,7 +2158,7 @@ krona_like_pq <- function(
   truncate_labels = FALSE,
   dismiss_overlaps = TRUE,
   label_fallback = c("dot", "initials", "none", "legend"),
-  fallback_symbol = "·",
+  fallback_symbol = "\u00b7",
   fallback_nchar = 3,
   leaf_label_padding = 0.08,
   show_search = FALSE,

@@ -45,7 +45,7 @@ devtools::install_github("adrientaudiere/ggplotpq")
 
 Initial development version (0.0.0.9000). No exported functions yet —
 migrations from 'MiscMetabar' and 'comparpq' land here first (see the
-ROADMAP at <https://github.com/adrientaudiere/pqverse/ROADMAP.md>, section
+ROADMAP at <https://github.com/adrientaudiere/pqverse>, section
 `ggplotpq`).
 
 ## License

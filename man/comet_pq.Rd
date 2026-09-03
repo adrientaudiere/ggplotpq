@@ -205,8 +205,15 @@ df_pq$Height_ord <- factor(
   levels = c("Low", "Middle", "High"),
   ordered = TRUE
 )
+# One tree is sampled twice at the same height, and comet_pq requires
+# exactly one row per (id, modality) step, so aggregate first.
+df_ex3 <- aggregate(
+  cbind(Hill_0, Abundance_log10) ~ Tree_name + Height_ord,
+  data = df_pq[!is.na(df_pq$Tree_name) & !is.na(df_pq$Height_ord), ],
+  FUN = mean
+)
 comet_pq(
-  df_pq[!is.na(df_pq$Tree_name) & !is.na(df_pq$Height_ord), ],
+  df_ex3,
   x = "Hill_0", y = "Abundance_log10",
   modality = "Height_ord", id = "Tree_name",
   color_by = "Height_ord", label_by = "Tree_name",
@@ -246,7 +253,7 @@ df_ex5 <- aggregate(
 comet_pq(
   df_ex5,
   x = "Hill_0", y = "Abundance_log10",
-  modality = "Time_ord", id = "id",
+  modality = "Time_ord", id = "Height_ord",
   color_by = "Time_ord",
   label_by = "Height_ord",
   label_nudge_x = 0.05

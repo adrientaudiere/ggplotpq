@@ -88,11 +88,11 @@ ggplot(mtcars, aes(wt, mpg, color = factor(cyl))) +
 
 The `idest` family (`theme_idest()`, `idest_pal()`, `scale_color_idest_*()`,
 `scale_fill_idest_*()`) provides a coordinated branded look; see the
-[function reference](../reference/index.html) for the full set.
+[function reference](https://adrientaudiere.github.io/ggplotpq/reference/index.html) for the full set.
 
 ## Where to go next
 
-- The [function reference](../reference/index.html) is organised by origin
+- The [function reference](https://adrientaudiere.github.io/ggplotpq/reference/index.html) is organised by origin
   (migrated from `MiscMetabar`, from `comparpq`, from `taxinfo`) and by new
   visualisation helpers.
 - Because every function returns a standard `ggplot` object, you can freely

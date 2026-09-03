@@ -575,7 +575,7 @@ zoom_outlier_axis <- function(
     if (!is.null(label_format)) {
       sprintf(label_format, x)
     } else {
-      trimws(format(x, big.mark = "\u202f", digits = 3, scientific = FALSE))
+      trimws(format(x, big.mark = " ", digits = 3, scientific = FALSE))
     }
   }
 

@@ -31,7 +31,7 @@ render their plots, but the analysis wrapper itself does not live here.
 
 Initial development version (0.0.0.9000). No exported functions yet —
 migrations from ‘MiscMetabar’ and ‘comparpq’ land here first (see the
-ROADMAP at <https://github.com/adrientaudiere/pqverse/ROADMAP.md>,
+ROADMAP at <https://github.com/adrientaudiere/pqverse>,
 section `ggplotpq`).
 
 ## License

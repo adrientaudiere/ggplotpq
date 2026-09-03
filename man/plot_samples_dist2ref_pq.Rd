@@ -128,6 +128,8 @@ at least two distinct values; other metrics fall back to trimming the
 violin to the observed data range.
 }
 \examples{
+data(data_fungi_mini, package = "MiscMetabar")
+ref <- phyloseq::sample_names(data_fungi_mini)[1]
 res <- plot_samples_dist2ref_pq(data_fungi_mini, ref_sample = ref, fact = "Height")
 res$rank_table # first row = modality closest to the reference
 res$plots$violin
