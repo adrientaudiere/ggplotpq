@@ -48,13 +48,16 @@ Suggests:
     pbapply,
     purrr,
     RColorBrewer,
+    Rtsne,
     rmarkdown,
+    reticulate,
     scales,
     sf,
     systemfonts,
     terra,
     testthat (>= 3.0.0),
     tidyr,
+    umap,
     vegan
 Remotes:
     adrientaudiere/MiscMetabar,

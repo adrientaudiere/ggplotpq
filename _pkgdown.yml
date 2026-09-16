@@ -41,7 +41,9 @@ reference:
       - community_sharing_barplot
       - make_sharing_metric
       - default_sharing_metrics
+      - dr_plot_pq
       - krona_like_pq
+      - pacmap_pq
       - palette_earthtones
       - palette_sam_pq
       - palette_tax_pq
@@ -55,6 +57,7 @@ reference:
       - ternary_biomarker_pq
       - ternary_pq
       - theme_pq_minimal
+      - umato_pq
   - title: "New single-phyloseq analysis wrappers"
     desc: "Analysis wrappers that ship a ggplot (the analysis lives here, the plot is the deliverable)."
     contents:
