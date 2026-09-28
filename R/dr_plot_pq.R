@@ -23,6 +23,12 @@
 #'   `otu_table` and `sample_data`.
 #' @param fact (default NULL) Name of a column of `sample_data` used to
 #'   colour the samples on every panel.
+#' @param shape (default NULL) Name of a column of `sample_data` used to set
+#'   the point shape on every panel. The column is treated as discrete.
+#' @param label (default NULL) Name of a column of `sample_data` (or
+#'   `"Sample"` for the sample names) used to label the samples on every
+#'   panel. Labels are drawn with [ggrepel::geom_text_repel()] when
+#'   `ggrepel` is installed, and with [ggplot2::geom_text()] otherwise.
 #' @param distance (default `"bray"`) Dissimilarity index passed to
 #'   [vegan::vegdist()] for t-SNE and to [phyloseq::ordinate()] for MDS and
 #'   NMDS. Not used by the count-matrix techniques (UMAP, UMATO, PaCMAP).
@@ -47,7 +53,8 @@
 #'   subtitled by its own backend parameters (`perplexity` for t-SNE,
 #'   `n_neighbors` — and `hub_num` — for the count-matrix techniques,
 #'   `stress` for NMDS, explained variance for MDS); a single colour legend
-#'   for `fact`, shared by all panels, sits below the grid. The embedding
+#'   for `fact` (and shape legend for `shape`), shared by all panels, sits
+#'   below the grid. The embedding
 #'   data frames (one per technique, each with the two coordinate columns,
 #'   `Sample` and every `sample_data` column) are attached as a named list
 #'   in the attribute `layouts`, so they can be reused without recomputing.
@@ -103,6 +110,14 @@
 #'     techniques = c("tsne", "mds", "nmds")
 #'   )
 #'   p
+#'
+#'   dr_plot_pq(
+#'     prune_samples(sample_names(data_fungi_mini)[1:20], data_fungi_mini),
+#'     fact = "Height",
+#'     shape = "Time",
+#'     label = "Sample",
+#'     techniques = c("mds", "nmds")
+#'   )
 #' }
 #' }
 #' \dontrun{
@@ -111,6 +126,8 @@
 dr_plot_pq <- function(
   physeq,
   fact = NULL,
+  shape = NULL,
+  label = NULL,
   distance = "bray",
   techniques = c("tsne", "umap", "umato", "pacmap", "mds", "nmds"),
   n_neighbors = 15,
@@ -120,6 +137,23 @@ dr_plot_pq <- function(
   MiscMetabar::verify_pq(physeq)
   if (!is.null(fact)) {
     MiscMetabar::verify_fact_pq(physeq, fact = fact)
+  }
+  sam_cols <- colnames(physeq@sam_data)
+  if (!is.null(shape) && !shape %in% sam_cols) {
+    cli::cli_abort(
+      c(
+        "Column {.val {shape}} (argument {.arg shape}) was not found in the {.field sam_data} slot of {.arg physeq}.",
+        "i" = "Available columns: {.val {sam_cols}}."
+      )
+    )
+  }
+  if (!is.null(label) && !label %in% c("Sample", sam_cols)) {
+    cli::cli_abort(
+      c(
+        "Column {.val {label}} (argument {.arg label}) was not found in the {.field sam_data} slot of {.arg physeq}.",
+        "i" = "Available columns: {.val {c(\"Sample\", sam_cols)}}."
+      )
+    )
   }
   techniques <- match.arg(
     techniques,
@@ -273,7 +307,10 @@ dr_plot_pq <- function(
   panels <- lapply(techniques, function(tech) {
     df <- layouts[[tech]]
     if (!is.null(fact)) {
-      df$.fact_col <- as.character(df[[fact]])
+      df$.fact_col <- factor(df[[fact]])
+    }
+    if (!is.null(shape)) {
+      df$.shape_col <- factor(df[[shape]])
     }
     p <- ggplot2::ggplot(
       df,
@@ -282,16 +319,43 @@ dr_plot_pq <- function(
     if (!is.null(fact)) {
       p <- p + ggplot2::aes(color = .data$.fact_col)
     }
-    p +
+    if (!is.null(shape)) {
+      # samples with a missing value get a cross instead of being dropped
+      p <- p +
+        ggplot2::aes(shape = .data$.shape_col) +
+        ggplot2::scale_shape_discrete(na.value = 4)
+    }
+    p <- p +
       ggplot2::geom_point(size = 2, alpha = 0.8) +
       ggplot2::labs(
         title = tech_title[[tech]],
         subtitle = subtitles[[tech]],
         x = NULL,
         y = NULL,
-        color = fact
+        color = fact,
+        shape = shape
       ) +
-      ggplot2::theme_bw()
+      ggplot2::theme_bw() +
+      ggplot2::theme(
+        plot.title = ggplot2::element_text(size = 10),
+        plot.subtitle = ggplot2::element_text(size = 8)
+      )
+    if (!is.null(label)) {
+      label_aes <- ggplot2::aes(label = .data[[label]])
+      if (requireNamespace("ggrepel", quietly = TRUE)) {
+        p <- p +
+          ggrepel::geom_text_repel(label_aes, size = 3, show.legend = FALSE)
+      } else {
+        p <- p +
+          ggplot2::geom_text(
+            label_aes,
+            size = 3,
+            vjust = -0.8,
+            show.legend = FALSE
+          )
+      }
+    }
+    p
   })
   names(panels) <- techniques
 
@@ -357,10 +421,27 @@ dr_plot_pq <- function(
 
   p_dr <- do.call(
     patchwork::wrap_plots,
-    c(plots, list(design = grid_str, guides = "collect"))
+    c(
+      plots,
+      list(
+        design = grid_str,
+        # slim header row so the family titles do not push the panels down
+        heights = c(0.08, 1, 1),
+        # narrow spacer columns between the family columns
+        widths = ifelse(seq_len(ncol(grid)) %% 2 == 1, 1, 0.05),
+        guides = "collect"
+      )
+    )
   ) +
     patchwork::plot_annotation(
-      title = "Six dimensionality-reduction techniques",
+      title = if (length(techniques) == 1) {
+        paste0(tech_title[[techniques]], " dimensionality reduction")
+      } else {
+        paste0(
+          c("Two", "Three", "Four", "Five", "Six")[length(techniques) - 1],
+          " dimensionality-reduction techniques"
+        )
+      },
       subtitle = paste0(
         "Local techniques preserve neighbourhoods; MDS/NMDS preserve global distances. ",
         "Distance: ",

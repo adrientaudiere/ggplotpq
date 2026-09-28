@@ -38,6 +38,7 @@ Suggests:
     ggfittext,
     ggforce,
     ggpattern,
+    ggrepel,
     ggtern,
     htmltools,
     htmlwidgets,

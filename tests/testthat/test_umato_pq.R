@@ -23,6 +23,29 @@ test_that("umato_pq returns a tibble with sample info and coordinates", {
   expect_true("Height" %in% names(df))
 })
 
+test_that("umato_pq handles 10 samples or fewer depending on pynndescent", {
+  skip_on_cran()
+  skip_if_not_installed("MiscMetabar")
+  skip_if_not_installed("phyloseq")
+  skip_if_not_installed("reticulate")
+  skip_if_not(
+    reticulate::py_module_available("umato"),
+    "python umato unavailable"
+  )
+  data(data_fungi_mini, package = "MiscMetabar")
+
+  six_samples <- prune_samples(
+    sample_names(data_fungi_mini)[1:6],
+    data_fungi_mini
+  )
+  if (reticulate::py_module_available("pynndescent")) {
+    df <- umato_pq(six_samples, n_neighbors = 3, random_state = 42)
+    expect_equal(nrow(df), 6)
+  } else {
+    expect_error(umato_pq(six_samples), "pynndescent")
+  }
+})
+
 test_that("umato_pq errors on missing python module or too few samples", {
   skip_if_not_installed("MiscMetabar")
   skip_if_not_installed("phyloseq")

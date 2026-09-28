@@ -58,6 +58,10 @@ The Python packages \code{reticulate} (R side) and \code{umato} (Python side) ar
 required; an informative error is thrown when either is missing
 (install the Python module with
 \code{reticulate::py_install("umato", pip = TRUE)}).
+The Python module \code{pynndescent} is also required when \code{physeq} has 10
+samples or fewer: without it, \code{umato} falls back on a nearest-neighbour
+search that crashes on such small data
+(\code{reticulate::py_install("pynndescent", pip = TRUE)}).
 }
 \examples{
 \dontrun{

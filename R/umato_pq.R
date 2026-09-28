@@ -47,6 +47,10 @@
 #' required; an informative error is thrown when either is missing
 #' (install the Python module with
 #' `reticulate::py_install("umato", pip = TRUE)`).
+#' The Python module `pynndescent` is also required when `physeq` has 10
+#' samples or fewer: without it, `umato` falls back on a nearest-neighbour
+#' search that crashes on such small data
+#' (`reticulate::py_install("pynndescent", pip = TRUE)`).
 #'
 #' @export
 #' @author Adrien Taudière
@@ -93,6 +97,20 @@ umato_pq <- function(physeq, n_neighbors = 15, ...) {
   if (phyloseq::nsamples(physeq) < 3) {
     cli::cli_abort(
       "{.arg physeq} must have at least 3 samples for a UMATO embedding."
+    )
+  }
+  # Without pynndescent, umato falls back on its own random-projection forest,
+  # which crashes ("'NoneType' object has no attribute 'shape'") when the
+  # tree root is a leaf, i.e. when nsamples <= max(10, n_neighbors).
+  if (
+    phyloseq::nsamples(physeq) <= 10 &&
+      !reticulate::py_module_available("pynndescent")
+  ) {
+    cli::cli_abort(
+      c(
+        "Python module {.pkg pynndescent} is required to run UMATO on 10 samples or fewer ({.arg physeq} has {phyloseq::nsamples(physeq)}).",
+        "i" = "Install it with {.code reticulate::py_install(\"pynndescent\", pip = TRUE)}."
+      )
     )
   }
 

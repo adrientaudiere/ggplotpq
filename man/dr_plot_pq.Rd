@@ -7,6 +7,8 @@
 dr_plot_pq(
   physeq,
   fact = NULL,
+  shape = NULL,
+  label = NULL,
   distance = "bray",
   techniques = c("tsne", "umap", "umato", "pacmap", "mds", "nmds"),
   n_neighbors = 15,
@@ -20,6 +22,14 @@ dr_plot_pq(
 
 \item{fact}{(default NULL) Name of a column of \code{sample_data} used to
 colour the samples on every panel.}
+
+\item{shape}{(default NULL) Name of a column of \code{sample_data} used to set
+the point shape on every panel. The column is treated as discrete.}
+
+\item{label}{(default NULL) Name of a column of \code{sample_data} (or
+\code{"Sample"} for the sample names) used to label the samples on every
+panel. Labels are drawn with \code{\link[ggrepel:geom_text_repel]{ggrepel::geom_text_repel()}} when
+\code{ggrepel} is installed, and with \code{\link[ggplot2:geom_text]{ggplot2::geom_text()}} otherwise.}
 
 \item{distance}{(default \code{"bray"}) Dissimilarity index passed to
 \code{\link[vegan:vegdist]{vegan::vegdist()}} for t-SNE and to \code{\link[phyloseq:ordinate]{phyloseq::ordinate()}} for MDS and
@@ -49,7 +59,8 @@ A patchwork ggplot. Every panel is titled by the technique name and
 subtitled by its own backend parameters (\code{perplexity} for t-SNE,
 \code{n_neighbors} — and \code{hub_num} — for the count-matrix techniques,
 \code{stress} for NMDS, explained variance for MDS); a single colour legend
-for \code{fact}, shared by all panels, sits below the grid. The embedding
+for \code{fact} (and shape legend for \code{shape}), shared by all panels, sits
+below the grid. The embedding
 data frames (one per technique, each with the two coordinate columns,
 \code{Sample} and every \code{sample_data} column) are attached as a named list
 in the attribute \code{layouts}, so they can be reused without recomputing.
@@ -103,6 +114,14 @@ if (requireNamespace("Rtsne", quietly = TRUE)) {
     techniques = c("tsne", "mds", "nmds")
   )
   p
+
+  dr_plot_pq(
+    prune_samples(sample_names(data_fungi_mini)[1:20], data_fungi_mini),
+    fact = "Height",
+    shape = "Time",
+    label = "Sample",
+    techniques = c("mds", "nmds")
+  )
 }
 }
 \dontrun{
