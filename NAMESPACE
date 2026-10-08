@@ -28,6 +28,7 @@ export(plot_tax_count_pq)
 export(plot_tax_table_pq)
 export(plot_taxa_heatmap_pq)
 export(reorder_distinct_colors)
+export(resize_fonts)
 export(scale_color_idest_c)
 export(scale_color_idest_d)
 export(scale_color_pq_discrete)
@@ -99,6 +100,7 @@ importFrom(phyloseq,
   taxa_sums
 )
 importFrom(rlang,
+  "%||%",
   ":=",
   .data
 )

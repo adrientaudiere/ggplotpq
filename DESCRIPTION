@@ -40,6 +40,7 @@ Suggests:
     ggpattern,
     ggrepel,
     ggtern,
+    ggtext,
     htmltools,
     htmlwidgets,
     jsonlite,
@@ -48,6 +49,7 @@ Suggests:
     packcircles,
     pbapply,
     purrr,
+    ragg,
     RColorBrewer,
     Rtsne,
     rmarkdown,
@@ -59,7 +61,8 @@ Suggests:
     testthat (>= 3.0.0),
     tidyr,
     umap,
-    vegan
+    vegan,
+    withr
 Remotes:
     adrientaudiere/MiscMetabar,
     adrientaudiere/tidypq

@@ -50,6 +50,7 @@ reference:
       - plot_sample_depth_pq
       - plot_tax_table_pq
       - plot_taxa_heatmap_pq
+      - resize_fonts
       - scale_color_pq_discrete
       - scale_fill_pq_discrete
       - scale_fill_tax_pq
