@@ -55,6 +55,7 @@ reference:
       - scale_fill_pq_discrete
       - scale_fill_tax_pq
       - show_palette_pq
+      - tax_bar_duo_pq
       - ternary_biomarker_pq
       - ternary_pq
       - theme_pq_minimal
