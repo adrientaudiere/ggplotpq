@@ -1,6 +1,5 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
-
 <!-- devtools::build_readme() -->
 
 # ggplotpq
@@ -31,8 +30,8 @@ render their plots, but the analysis wrapper itself does not live here.
 
 Initial development version (0.0.0.9000). No exported functions yet —
 migrations from ‘MiscMetabar’ and ‘comparpq’ land here first (see the
-ROADMAP at <https://github.com/adrientaudiere/pqverse>,
-section `ggplotpq`).
+ROADMAP at <https://github.com/adrientaudiere/pqverse>, section
+`ggplotpq`).
 
 ## License
 
