@@ -26,8 +26,8 @@ render their plots, but the analysis wrapper itself does not live here.
 
 Initial development version (0.0.0.9000). No exported functions yet —
 migrations from ‘MiscMetabar’ and ‘comparpq’ land here first (see the
-ROADMAP at <https://github.com/adrientaudiere/pqverse/ROADMAP.md>,
-section `ggplotpq`).
+ROADMAP at <https://github.com/adrientaudiere/pqverse>, section
+`ggplotpq`).
 
 ## License
 
@@ -112,11 +112,23 @@ palettes).
   Default metrics for
   [`community_sharing_plot()`](https://adrientaudiere.github.io/ggplotpq/reference/community_sharing_plot.md)
 
+- [`dr_plot_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/dr_plot_pq.md)
+  : Compare six dimension-reduction techniques on a phyloseq object
+
 - [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
   : Krona-like interactive taxonomy plot from a phyloseq object
 
+- [`pacmap_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/pacmap_pq.md)
+  : PaCMAP embedding of a phyloseq object (Python backend)
+
 - [`palette_earthtones()`](https://adrientaudiere.github.io/ggplotpq/reference/palette_earthtones.md)
   : Derive a colour palette from a geographic location
+
+- [`palette_sam_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/palette_sam_pq.md)
+  : Build a stable colour palette for a sample variable
+
+- [`palette_tax_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/palette_tax_pq.md)
+  : Build a stable colour palette for a taxonomic rank
 
 - [`plot_sample_depth_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_sample_depth_pq.md)
   : Plot per-sample read depth (number of sequences)
@@ -129,11 +141,26 @@ palettes).
 - [`plot_taxa_heatmap_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_taxa_heatmap_pq.md)
   : Heatmap of the top-N most abundant taxa across samples
 
+- [`resize_fonts()`](https://adrientaudiere.github.io/ggplotpq/reference/resize_fonts.md)
+  : Shrink the text of a ggplot so that it fits a given figure size
+
 - [`scale_color_pq_discrete()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_color_pq_discrete.md)
   : ggplot2 discrete colour scale using the IdEst palette family
 
 - [`scale_fill_pq_discrete()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_fill_pq_discrete.md)
   : ggplot2 discrete fill scale using the IdEst palette family
+
+- [`scale_fill_tax_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_fill_tax_pq.md)
+  [`scale_color_tax_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_fill_tax_pq.md)
+  [`scale_fill_sam_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_fill_tax_pq.md)
+  [`scale_color_sam_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_fill_tax_pq.md)
+  : Apply a stored palette to any ggplot
+
+- [`show_palette_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/show_palette_pq.md)
+  : Look at a palette before trusting it to a figure
+
+- [`tax_bar_duo_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/tax_bar_duo_pq.md)
+  : Side-by-side sequence and taxa composition bar plots
 
 - [`ternary_biomarker_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/ternary_biomarker_pq.md)
   : Ternary plot of biomarker taxa across three sample groups
@@ -143,6 +170,9 @@ palettes).
 
 - [`theme_pq_minimal()`](https://adrientaudiere.github.io/ggplotpq/reference/theme_pq_minimal.md)
   : A pared-down minimalist ggplot2 theme for ggplotpq
+
+- [`umato_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/umato_pq.md)
+  : UMATO embedding of a phyloseq object (Python backend)
 
 ## New single-phyloseq analysis wrappers
 

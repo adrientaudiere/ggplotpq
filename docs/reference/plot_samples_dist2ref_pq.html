@@ -220,18 +220,25 @@ violin to the observed data range.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">plot_samples_dist2ref_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, ref_sample <span class="op">=</span> <span class="va">ref</span>, fact <span class="op">=</span> <span class="st">"Height"</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'ref' not found</span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">data_fungi_mini</span>, package <span class="op">=</span> <span class="st">"MiscMetabar"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">ref</span> <span class="op">&lt;-</span> <span class="fu">phyloseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/phyloseq/man/sample_names-methods.html" class="external-link">sample_names</a></span><span class="op">(</span><span class="va">data_fungi_mini</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span></span>
+<span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">plot_samples_dist2ref_pq</span><span class="op">(</span><span class="va">data_fungi_mini</span>, ref_sample <span class="op">=</span> <span class="va">ref</span>, fact <span class="op">=</span> <span class="st">"Height"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">rank_table</span> <span class="co"># first row = modality closest to the reference</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'res' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 4 × 5</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Height     n dist_mean dist_sd dist_median</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;int&gt;</span>     <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">1</span> Middle    30     0.892  0.199        0.999</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">2</span> High      28     0.904  0.155        0.998</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">3</span> <span style="color: #BB0000;">NA</span>        47     0.934  0.121        0.998</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">4</span> Low       31     0.948  0.099<span style="text-decoration: underline;">6</span>       0.999</span>
 <span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">violin</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'res' not found</span>
+<span class="r-plt img"><img src="plot_samples_dist2ref_pq-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">lollipop</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'res' not found</span>
+<span class="r-plt img"><img src="plot_samples_dist2ref_pq-2.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">pcoa_global</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'res' not found</span>
+<span class="r-plt img"><img src="plot_samples_dist2ref_pq-3.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">plots</span><span class="op">$</span><span class="va">pcoa_local</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'res' not found</span>
+<span class="r-plt img"><img src="plot_samples_dist2ref_pq-4.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Reference set flagged in sample_data, distance to the nearest reference</span></span></span>
 <span class="r-in"><span><span class="fu">phyloseq</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/phyloseq/man/sample_data-methods.html" class="external-link">sample_data</a></span><span class="op">(</span><span class="va">data_fungi_mini</span><span class="op">)</span><span class="op">$</span><span class="va">is_ref</span> <span class="op">&lt;-</span></span></span>
@@ -271,7 +278,7 @@ violin to the observed data range.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

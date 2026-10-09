@@ -940,8 +940,15 @@ df_pq$Height_ord <- factor(
   levels = c("Low", "Middle", "High"),
   ordered = TRUE
 )
+# One tree is sampled twice at the same height, and comet_pq requires
+# exactly one row per (id, modality) step, so aggregate first.
+df_ex3 <- aggregate(
+  cbind(Hill_0, Abundance_log10) ~ Tree_name + Height_ord,
+  data = df_pq[!is.na(df_pq$Tree_name) & !is.na(df_pq$Height_ord), ],
+  FUN = mean
+)
 comet_pq(
-  df_pq[!is.na(df_pq$Tree_name) & !is.na(df_pq$Height_ord), ],
+  df_ex3,
   x = "Hill_0", y = "Abundance_log10",
   modality = "Height_ord", id = "Tree_name",
   color_by = "Height_ord", label_by = "Tree_name",
@@ -956,12 +963,7 @@ comet_pq(
 #>   "BA17-050", "BB19-006", "BB6-019", "BG7-010", "BJ17-007", "BL7-006",
 #>   "BP12-025", "BT7-006", "C21-nv-1", "C9-005", "DG1-010", "DJ2-008", "DU3-045",
 #>   "EC2-013", …, "nvabm0163", and "nvabm0244"
-#> Error in comet_pq(df_pq[!is.na(df_pq$Tree_name) & !is.na(df_pq$Height_ord),     ], x = "Hill_0", y = "Abundance_log10", modality = "Height_ord",     id = "Tree_name", color_by = "Height_ord", label_by = "Tree_name",     label_nudge_x = 0.05): Duplicate `modality` levels found within one or more `id` groups.
-#> ℹ Each step of a comet must have exactly one row per (`id`, `modality`)
-#>   combination.
-#> ℹ Aggregate duplicates first — see `?comet_pq` example 5, or use:
-#> ℹ `dplyr::summarise(dplyr::across(c("Hill_0", "Abundance_log10"), mean), .by =
-#>   c("Tree_name", "Height_ord"))`
+
 
 # 4. Same height modality, but constant colour per comet (by sampling Time).
 #    comet_pq requires exactly one row per (id, modality) step, so
@@ -1006,12 +1008,12 @@ df_ex5 <- aggregate(
 comet_pq(
   df_ex5,
   x = "Hill_0", y = "Abundance_log10",
-  modality = "Time_ord", id = "id",
+  modality = "Time_ord", id = "Height_ord",
   color_by = "Time_ord",
   label_by = "Height_ord",
   label_nudge_x = 0.05
 )
-#> Error in comet_pq(df_ex5, x = "Hill_0", y = "Abundance_log10", modality = "Time_ord",     id = "id", color_by = "Time_ord", label_by = "Height_ord",     label_nudge_x = 0.05): Column not found in `data`: "id"
+
 
 # }
 ```

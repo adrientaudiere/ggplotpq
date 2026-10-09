@@ -164,18 +164,25 @@ Adrien Taudière
 ## Examples
 
 ``` r
+data(data_fungi_mini, package = "MiscMetabar")
+ref <- phyloseq::sample_names(data_fungi_mini)[1]
 res <- plot_samples_dist2ref_pq(data_fungi_mini, ref_sample = ref, fact = "Height")
-#> Error: object 'ref' not found
 res$rank_table # first row = modality closest to the reference
-#> Error: object 'res' not found
+#> # A tibble: 4 × 5
+#>   Height     n dist_mean dist_sd dist_median
+#>   <chr>  <int>     <dbl>   <dbl>       <dbl>
+#> 1 Middle    30     0.892  0.199        0.999
+#> 2 High      28     0.904  0.155        0.998
+#> 3 NA        47     0.934  0.121        0.998
+#> 4 Low       31     0.948  0.0996       0.999
 res$plots$violin
-#> Error: object 'res' not found
+
 res$plots$lollipop
-#> Error: object 'res' not found
+
 res$plots$pcoa_global
-#> Error: object 'res' not found
+
 res$plots$pcoa_local
-#> Error: object 'res' not found
+
 
 # Reference set flagged in sample_data, distance to the nearest reference
 phyloseq::sample_data(data_fungi_mini)$is_ref <-

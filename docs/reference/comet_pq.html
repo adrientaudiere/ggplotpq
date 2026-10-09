@@ -1025,8 +1025,15 @@ the columns used by the plot (coordinates, <code>modality</code>, <code>id</code
 <span class="r-in"><span>  levels <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"Low"</span>, <span class="st">"Middle"</span>, <span class="st">"High"</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  ordered <span class="op">=</span> <span class="cn">TRUE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="co"># One tree is sampled twice at the same height, and comet_pq requires</span></span></span>
+<span class="r-in"><span><span class="co"># exactly one row per (id, modality) step, so aggregate first.</span></span></span>
+<span class="r-in"><span><span class="va">df_ex3</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/aggregate.html" class="external-link">aggregate</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">Hill_0</span>, <span class="va">Abundance_log10</span><span class="op">)</span> <span class="op">~</span> <span class="va">Tree_name</span> <span class="op">+</span> <span class="va">Height_ord</span>,</span></span>
+<span class="r-in"><span>  data <span class="op">=</span> <span class="va">df_pq</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">df_pq</span><span class="op">$</span><span class="va">Tree_name</span><span class="op">)</span> <span class="op">&amp;</span> <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">df_pq</span><span class="op">$</span><span class="va">Height_ord</span><span class="op">)</span>, <span class="op">]</span>,</span></span>
+<span class="r-in"><span>  FUN <span class="op">=</span> <span class="va">mean</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">comet_pq</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">df_pq</span><span class="op">[</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">df_pq</span><span class="op">$</span><span class="va">Tree_name</span><span class="op">)</span> <span class="op">&amp;</span> <span class="op">!</span><span class="fu"><a href="https://rdrr.io/r/base/NA.html" class="external-link">is.na</a></span><span class="op">(</span><span class="va">df_pq</span><span class="op">$</span><span class="va">Height_ord</span><span class="op">)</span>, <span class="op">]</span>,</span></span>
+<span class="r-in"><span>  <span class="va">df_ex3</span>,</span></span>
 <span class="r-in"><span>  x <span class="op">=</span> <span class="st">"Hill_0"</span>, y <span class="op">=</span> <span class="st">"Abundance_log10"</span>,</span></span>
 <span class="r-in"><span>  modality <span class="op">=</span> <span class="st">"Height_ord"</span>, id <span class="op">=</span> <span class="st">"Tree_name"</span>,</span></span>
 <span class="r-in"><span>  color_by <span class="op">=</span> <span class="st">"Height_ord"</span>, label_by <span class="op">=</span> <span class="st">"Tree_name"</span>,</span></span>
@@ -1041,12 +1048,7 @@ the columns used by the plot (coordinates, <code>modality</code>, <code>id</code
 <span class="r-wrn co"><span class="r-pr">#&gt;</span>   <span style="color: #0000BB;">"BA17-050"</span>, <span style="color: #0000BB;">"BB19-006"</span>, <span style="color: #0000BB;">"BB6-019"</span>, <span style="color: #0000BB;">"BG7-010"</span>, <span style="color: #0000BB;">"BJ17-007"</span>, <span style="color: #0000BB;">"BL7-006"</span>,</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span>   <span style="color: #0000BB;">"BP12-025"</span>, <span style="color: #0000BB;">"BT7-006"</span>, <span style="color: #0000BB;">"C21-nv-1"</span>, <span style="color: #0000BB;">"C9-005"</span>, <span style="color: #0000BB;">"DG1-010"</span>, <span style="color: #0000BB;">"DJ2-008"</span>, <span style="color: #0000BB;">"DU3-045"</span>,</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span>   <span style="color: #0000BB;">"EC2-013"</span>, …, <span style="color: #0000BB;">"nvabm0163"</span>, and <span style="color: #0000BB;">"nvabm0244"</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in comet_pq(df_pq[!is.na(df_pq$Tree_name) &amp; !is.na(df_pq$Height_ord),     ], x = "Hill_0", y = "Abundance_log10", modality = "Height_ord",     id = "Tree_name", color_by = "Height_ord", label_by = "Tree_name",     label_nudge_x = 0.05):</span> Duplicate `modality` levels found within one or more `id` groups.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Each step of a comet must have exactly one row per (`id`, `modality`)</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span>   combination.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Aggregate duplicates first — see `?comet_pq` example 5, or use:</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> `dplyr::summarise(dplyr::across(c(<span style="color: #0000BB;">"Hill_0"</span>, <span style="color: #0000BB;">"Abundance_log10"</span>), mean), .by =</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span>   c(<span style="color: #0000BB;">"Tree_name"</span>, <span style="color: #0000BB;">"Height_ord"</span>))`</span>
+<span class="r-plt img"><img src="comet_pq-3.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># 4. Same height modality, but constant colour per comet (by sampling Time).</span></span></span>
 <span class="r-in"><span><span class="co">#    comet_pq requires exactly one row per (id, modality) step, so</span></span></span>
@@ -1076,7 +1078,7 @@ the columns used by the plot (coordinates, <code>modality</code>, <code>id</code
 <span class="r-wrn co"><span class="r-pr">#&gt;</span>   <span style="color: #0000BB;">"BB19-006"</span>, <span style="color: #0000BB;">"BB6-019"</span>, <span style="color: #0000BB;">"BG7-010"</span>, <span style="color: #0000BB;">"BJ17-007"</span>, <span style="color: #0000BB;">"BL7-006"</span>, <span style="color: #0000BB;">"BP12-025"</span>,</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span>   <span style="color: #0000BB;">"BT7-006"</span>, <span style="color: #0000BB;">"C21-nv-1"</span>, <span style="color: #0000BB;">"C9-005"</span>, <span style="color: #0000BB;">"DG1-010"</span>, <span style="color: #0000BB;">"DJ2-008"</span>, <span style="color: #0000BB;">"DU3-045"</span>, <span style="color: #0000BB;">"EC2-013"</span>,</span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span>   <span style="color: #0000BB;">"F7-015"</span>, …, <span style="color: #0000BB;">"nvabm0163"</span>, and <span style="color: #0000BB;">"nvabm0244"</span></span>
-<span class="r-plt img"><img src="comet_pq-3.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="comet_pq-4.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="co"># 5. Gradient by time: each height (Low/Middle/High) recurs at all four</span></span></span>
 <span class="r-in"><span><span class="co">#    time points, making Height_ord the natural id for time-step comets.</span></span></span>
 <span class="r-in"><span><span class="co">#    color_by must equal modality to trigger the viridis gradient.</span></span></span>
@@ -1091,12 +1093,12 @@ the columns used by the plot (coordinates, <code>modality</code>, <code>id</code
 <span class="r-in"><span><span class="fu">comet_pq</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">df_ex5</span>,</span></span>
 <span class="r-in"><span>  x <span class="op">=</span> <span class="st">"Hill_0"</span>, y <span class="op">=</span> <span class="st">"Abundance_log10"</span>,</span></span>
-<span class="r-in"><span>  modality <span class="op">=</span> <span class="st">"Time_ord"</span>, id <span class="op">=</span> <span class="st">"id"</span>,</span></span>
+<span class="r-in"><span>  modality <span class="op">=</span> <span class="st">"Time_ord"</span>, id <span class="op">=</span> <span class="st">"Height_ord"</span>,</span></span>
 <span class="r-in"><span>  color_by <span class="op">=</span> <span class="st">"Time_ord"</span>,</span></span>
 <span class="r-in"><span>  label_by <span class="op">=</span> <span class="st">"Height_ord"</span>,</span></span>
 <span class="r-in"><span>  label_nudge_x <span class="op">=</span> <span class="fl">0.05</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in comet_pq(df_ex5, x = "Hill_0", y = "Abundance_log10", modality = "Time_ord",     id = "id", color_by = "Time_ord", label_by = "Height_ord",     label_nudge_x = 0.05):</span> Column not found in `data`: <span style="color: #0000BB;">"id"</span></span>
+<span class="r-plt img"><img src="comet_pq-5.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
@@ -1110,7 +1112,7 @@ the columns used by the plot (coordinates, <code>modality</code>, <code>id</code
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

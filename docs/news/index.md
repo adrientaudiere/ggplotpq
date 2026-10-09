@@ -2,6 +2,120 @@
 
 ## ggplotpq 0.2.0 (Development version)
 
+- [`dr_plot_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/dr_plot_pq.md)
+  applies up to six dimensionality-reduction techniques to a phyloseq
+  object – t-SNE, UMAP, UMATO and PaCMAP (local /
+  local-global-compromise techniques) plus MDS and NMDS (global
+  techniques) – and draws them side by side in a single patchwork
+  figure, always arranged in three fixed family columns announced by
+  column headers (Local: UMAP, t-SNE; Global: MDS, NMDS; Local/Global
+  trade-off: UMATO, PaCMAP). `shape` maps a `sample_data` column to the
+  point shape and `label` labels the samples (with `ggrepel` when
+  installed) on the data panels only – adding a layer with `&` would
+  also hit the column-header cells and fail. The figure title states the
+  number of techniques actually drawn. The family header row is slim and
+  the spacer columns between families are narrow (no more large gaps
+  between panels), and panel titles/subtitles use smaller fonts (10/8
+  pt). `fact` and `shape` are converted with
+  [`factor()`](https://rdrr.io/r/base/factor.html), so numeric columns
+  sort numerically in the legend (0, 5, 15 rather than 0, 15, 5) and
+  factor levels are kept; samples with a missing `shape` value are drawn
+  as a cross instead of being dropped. Taxa with zero counts are dropped
+  before the embeddings, so NMDS no longer warns about undefined species
+  scores on sparse subsets.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  gains `abbrev_species` (default `FALSE`): when `TRUE`, each name at
+  the `"Species"` rank is prefixed with its parent genus initial so it
+  reads as an abbreviated binomial (e.g. `"muscaria"` under `"Amanita"`
+  becomes `"A. muscaria"`), in both the static and interactive plots;
+  placeholder names are left untouched.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  gains `label_size`, a positive font-size multiplier applied to both
+  plots: a single value for all labels, one value per rank
+  (`length(ranks)`), or one value per taxon (`ntaxa`, positional in
+  [`taxa_names()`](https://rdrr.io/pkg/phyloseq/man/taxa_names-methods.html)
+  order, where each internal node’s size is the mean of its descendant
+  leaves’).
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  gains `truncate_labels` (default `FALSE`), now honoured by both the
+  static and interactive plots: when `TRUE`, a label too long for its
+  space is middle-truncated with an ellipsis (e.g. `"Strophariaceae"`
+  becomes `"Stro...aceae"`); when `FALSE`, labels are never abbreviated
+  – full names are shown when they fit and hidden otherwise (pair with
+  `label_size` to shrink text until they fit).
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  interactive info panel (`show_info_panel = TRUE`) now shows the
+  current view’s root node when the cursor is over empty space (the
+  centre hole, inter-wedge gaps, or outside the rim) instead of staying
+  frozen on the last hovered wedge; the shown root follows zooming.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  interactive widget now fills its container by default (the whole
+  browser window for a standalone `.html`, the whole RStudio viewer
+  pane, full viewport height otherwise) instead of a fixed 900px height,
+  and the sunburst pie is centred in the canvas whatever the aspect
+  ratio (previously anchored to the top-left on wide windows); pass
+  explicit `width`/`height` to fix the size.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  interactive widget shows a clicked leaf as a single full 100% disc
+  with the leaf name in its centre, and, when zooming into the
+  second-to-last rank, draws the leaf child’s name inside its (now wide)
+  arc instead of off the clipped rim.
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  static sunburst formalises its label placement into three documented
+  `label_orientation` modes – `"option1"` (every label arc-following,
+  alias `"tangential"`), `"option2"` (internal arc-following, leaf
+  radial, alias `"mixed"`), and `"option3"` (the default hybrid, aliases
+  `"auto"`/`"radial"`).
+- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
+  static sunburst now draws a larger pie with smaller, denser labels
+  (reduced reserved outer margin and font sizes, looser fit thresholds),
+  showing more taxa names at once.
+- [`pacmap_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/pacmap_pq.md)
+  computes a 2-dimensional PaCMAP embedding (Wang et al., 2021) of the
+  samples of a phyloseq object through the Python package `pacmap` via
+  `reticulate`; PaCMAP balances neighbour, mid-near and far pairs for a
+  local/global compromise, reorganizing its pair budget on small data.
+  The result is a tibble with `x_pacmap`/`y_pacmap`, `Sample` and every
+  `sample_data` column; no transformation is applied inside the
+  function.
+- [`palette_sam_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/palette_sam_pq.md)
+  is the `sample_data` counterpart of
+  [`palette_tax_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/palette_tax_pq.md),
+  keeping a modality on the same color across every figure.
+  `type = "auto"` gives unordered variables distinct hues at constant
+  lightness and ordered or numeric ones a single-hue lightness ramp, so
+  a sampling time or a pH gradient reads as a gradient instead of a
+  rainbow; `order_by = "levels"` honors the declared factor levels,
+  which is what makes that ramp follow the intended order. `nested`
+  colors a variable by a parent variable (sites within regions), and
+  `add_to_phyloseq = TRUE` stores the palette in a `<var>_color` column
+  of `sample_data`.
+- [`palette_tax_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/palette_tax_pq.md)
+  builds a color palette for a taxonomic rank that stays identical
+  across every figure of a document: levels get a color, anything
+  filtered out shares a reserved `other` entry, and because ggplot2
+  matches manual scales by name a plot showing only some levels simply
+  consumes the matching entries. By default, (`n = NULL`) every level of
+  the rank is colored; setting `n` keeps only the heaviest, and
+  `filter_by` (`"abundance"`, `"n_taxa"`, `"mean"`, `"prevalence"`) then
+  decides which those are – it has no effect at all while `n` is `NULL`.
+  `order_by` always applies and decides which color each level gets and
+  how the legend reads (`"alpha"` by default, or `"abundance"`,
+  `"n_taxa"`); alphabetical ordering does not move when abundances
+  change, so a taxon keeps its color across datasets. colors come from
+  the smallest colorblind-safe IdEst palette that fits, or are generated
+  in a perceptually uniform OKLCH space beyond 11 levels. With
+  `add_to_phyloseq = TRUE` the palette is written into a `<rank>_color`
+  column of the `tax_table`, so the anchoring travels with the rows
+  through
+  [`subset_taxa()`](https://rdrr.io/pkg/phyloseq/man/subset_taxa-methods.html),
+  [`prune_taxa()`](https://rdrr.io/pkg/phyloseq/man/prune_taxa-methods.html)
+  and [`saveRDS()`](https://rdrr.io/r/base/readRDS.html) and is read
+  back on later calls instead of being recomputed; `suffix` lets a
+  second palette coexist on the same rank, and `force` overwrites the
+  first. With `nested`, hue encodes a parent rank and lightness the leaf
+  within its parent. The returned object can be added to any ggplot with
+  `+`, whatever function produced it.
 - [`plot_samples_dist2ref_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_samples_dist2ref_pq.md)
   computes the distance of every sample to a reference (control) sample
   set – a single sample named via `ref_sample`, or a set flagged in
@@ -21,55 +135,75 @@
   lollipop plots with `show_ref = FALSE` (default `TRUE`), which also
   zooms the distance axis on the non-reference range so differences
   among samples are easier to read.
-- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
-  static sunburst formalises its label placement into three documented
-  `label_orientation` modes – `"option1"` (every label arc-following,
-  alias `"tangential"`), `"option2"` (internal arc-following, leaf
-  radial, alias `"mixed"`), and `"option3"` (the default hybrid, aliases
-  `"auto"`/`"radial"`).
-- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
-  gains `truncate_labels` (default `FALSE`), now honoured by both the
-  static and interactive plots: when `TRUE`, a label too long for its
-  space is middle-truncated with an ellipsis (e.g. `"Strophariaceae"`
-  becomes `"Stro...aceae"`); when `FALSE`, labels are never abbreviated
-  – full names are shown when they fit and hidden otherwise (pair with
-  `label_size` to shrink text until they fit).
-- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
-  gains `label_size`, a positive font-size multiplier applied to both
-  plots: a single value for all labels, one value per rank
-  (`length(ranks)`), or one value per taxon (`ntaxa`, positional in
-  `taxa_names()` order, where each internal node’s size is the mean of
-  its descendant leaves’).
-- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
-  interactive widget shows a clicked leaf as a single full 100% disc
-  with the leaf name in its centre, and, when zooming into the
-  second-to-last rank, draws the leaf child’s name inside its (now wide)
-  arc instead of off the clipped rim.
-- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
-  static sunburst now draws a larger pie with smaller, denser labels
-  (reduced reserved outer margin and font sizes, looser fit thresholds),
-  showing more taxa names at once.
-- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
-  interactive widget now fills its container by default (the whole
-  browser window for a standalone `.html`, the whole RStudio viewer
-  pane, full viewport height otherwise) instead of a fixed 900px height,
-  and the sunburst pie is centred in the canvas whatever the aspect
-  ratio (previously anchored to the top-left on wide windows); pass
-  explicit `width`/`height` to fix the size.
-- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
-  interactive info panel (`show_info_panel = TRUE`) now shows the
-  current view’s root node when the cursor is over empty space (the
-  centre hole, inter-wedge gaps, or outside the rim) instead of staying
-  frozen on the last hovered wedge; the shown root follows zooming.
-- [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
-  gains `abbrev_species` (default `FALSE`): when `TRUE`, each name at
-  the `"Species"` rank is prefixed with its parent genus initial so it
-  reads as an abbreviated binomial (e.g. `"muscaria"` under `"Amanita"`
-  becomes `"A. muscaria"`), in both the static and interactive plots;
-  placeholder names are left untouched.
+- [`resize_fonts()`](https://adrientaudiere.github.io/ggplotpq/reference/resize_fonts.md)
+  shrinks the text of a ggplot or of a whole patchwork so that nothing
+  overlaps or leaves the canvas at a given `width` and `height`: it
+  draws the figure off-screen at that size, measures every label
+  (rotated ones included), and finds the largest common font scale by
+  bisection between `min_scale` and `max_scale`. Inside a knitr or
+  Quarto chunk, `width` and `height` default to the chunk’s `fig-width`
+  and `fig-height`, and text is measured on the chunk’s device. Outside
+  knitr they default to the size of the open graphics device, or to 7 x
+  5 inches (with a message) when no device is open. One argument per
+  text category (`axis_text`, `axis_title`, `titles`, `strip`, `legend`,
+  `geom_text`) chooses which text is checked for overlaps; all are
+  `TRUE` except `geom_text`. By default only the checked categories are
+  resized; `resize_all = TRUE` shrinks every text of the plot by the
+  same scale and uses the category arguments only for the overlap check.
+  The chosen scale is stored in the `"font_scale"` attribute, and a
+  warning is raised when overlaps remain at `min_scale`.
+- [`scale_fill_tax_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_fill_tax_pq.md),
+  [`scale_color_tax_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_fill_tax_pq.md),
+  [`scale_fill_sam_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_fill_tax_pq.md)
+  and
+  [`scale_color_sam_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/scale_fill_tax_pq.md)
+  turn the palette stored in a phyloseq object into a discrete scale, so
+  a plot produced by any function – inside ggplotpq or outside it – can
+  be colored without that function knowing palettes exist. They default
+  to `drop = FALSE` and `limits = force`, keeping one legend across
+  figures that show different subsets of the levels, and resolve which
+  color column to read: the default `<var>_color`, or the single
+  `<var>_color_*` alternative when there is exactly one, failing with
+  the list when several exist. `identity = TRUE` handles plots that map
+  the color column itself rather than the level, repairing the legend so
+  it shows level names instead of hex codes. They never build a palette
+  on the fly: an object with no stored palette raises an error naming
+  the two correct fixes.
+- [`show_palette_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/show_palette_pq.md)
+  renders a palette as swatches, as points, or – by default – both side
+  by side, so a palette can be judged at the size the real figure will
+  draw it: two colors that are obviously different as large flat
+  swatches can be indistinguishable as 3-pixel dots in an ordination.
+  The default point view repeats each level as a deterministic 25-point
+  cloud, making overplotting visible too. A nested palette is faceted by
+  parent, which is the fastest way to see that a parent holds more
+  leaves than its lightness ramp can carry. Given a phyloseq object
+  rather than a palette, it lists every palette the object carries.
+- [`umato_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/umato_pq.md)
+  computes a 2-dimensional UMATO embedding (Jeon et al., 2025) of the
+  samples of a phyloseq object through the Python package `umato` via
+  `reticulate`; UMATO optimises hub positions to bridge local and global
+  structures, giving a more reliable reading of the relations between
+  clusters than plain UMAP. The result is a tibble with
+  `x_umato`/`y_umato`, `Sample` and every `sample_data` column;
+  `hub_num` defaults to `min(300, nsamples - 1)` so small objects run,
+  and no transformation is applied inside the function. On 10 samples or
+  fewer it requires the Python module `pynndescent` and errors
+  informatively when it is missing, instead of failing inside `umato`
+  with `'NoneType' object has no attribute 'shape'`.
 
-## ggplotpq 0.1.0\* `plot_tax_count_pq()`, `ternary_pq()` and `ternary_biomarker_pq()` now validate their grouping column through `MiscMetabar::verify_fact_pq()`, raising a clear error listing the available `sample_data` columns when the requested `fact` column is absent; `plot_tax_count_pq()` previously accessed the column without checking it existed.
+## ggplotpq 0.1.0
 
+- [`plot_tax_count_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_count_pq.md),
+  [`ternary_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/ternary_pq.md)
+  and
+  [`ternary_biomarker_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/ternary_biomarker_pq.md)
+  now validate their grouping column through
+  [`MiscMetabar::verify_fact_pq()`](https://adrientaudiere.github.io/MiscMetabar/reference/verify_fact_pq.html),
+  raising a clear error listing the available `sample_data` columns when
+  the requested `fact` column is absent;
+  [`plot_tax_count_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/plot_tax_count_pq.md)
+  previously accessed the column without checking it existed.
 - [`track_wkflow_formattable()`](https://adrientaudiere.github.io/ggplotpq/reference/track_wkflow_formattable.md)
   gains `clean_parent` (default `TRUE`), which drops rows of `track_df`
   that have no entry in `parent` before building the tree instead of
@@ -112,7 +246,7 @@
   correctly as intended: **internal** labels run tangentially,
   arc-following along their own ring band; **leaf** labels are radial, a
   spoke reading straight outward from the centre, placed outside the
-  coloured arc with the offset controlled by a new `leaf_label_padding`
+  colored arc with the offset controlled by a new `leaf_label_padding`
   argument (default `0.08`; `0` sits right at the border, negative
   values pull the label back inside the wedge, larger values push it
   further out with a leader line); also gains two more
@@ -213,7 +347,7 @@
   taxonomic ranks (Kingdom → Species) when at least two are present,
   avoiding non-hierarchical annotation columns from appearing in the
   chart; the interactive widget now shows a toolbar with a **Color by**
-  dropdown (pre-computes one colour set per rank on the R side), **Max
+  dropdown (pre-computes one color set per rank on the R side), **Max
   depth** and **Font size** selectors, a **Collapse** toggle (JS-side
   single-child collapse), and the search box is integrated into the same
   bar; the interactive sunburst now renders text labels on arcs wide
@@ -227,14 +361,15 @@
   gains `check_nestedness` (default `TRUE`) to toggle the nestedness
   validation warning, `collapse_single` to remove uninformative
   single-child intermediate ranks, `color_as_numeric` to map any numeric
-  `tax_table()` column to a viridis gradient, `label_pct` (`"none"` /
-  `"total"` / `"parent"`) to append proportions to section labels,
-  `min_prop` to merge low-abundance siblings into a crosshatch-marked
-  `"n more"` aggregate, `show_center_count` (default `TRUE`) to display
-  the total count in the sunburst centre (and the focused node count on
-  zoom), `show_search` to add a live search box to the interactive
-  widget, and `show_info_panel` to add a hover info panel showing count
-  and percentages; also adds nestedness validation (`cli_warn` on
+  [`tax_table()`](https://rdrr.io/pkg/phyloseq/man/tax_table-methods.html)
+  column to a viridis gradient, `label_pct` (`"none"` / `"total"` /
+  `"parent"`) to append proportions to section labels, `min_prop` to
+  merge low-abundance siblings into a crosshatch-marked `"n more"`
+  aggregate, `show_center_count` (default `TRUE`) to display the total
+  count in the sunburst centre (and the focused node count on zoom),
+  `show_search` to add a live search box to the interactive widget, and
+  `show_info_panel` to add a hover info panel showing count and
+  percentages; also adds nestedness validation (`cli_warn` on
   non-strictly-nested `tax_table`), middle-ellipsis label truncation,
   and radially-oriented leaf-rank labels.
 - [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
@@ -261,8 +396,8 @@
   argument (`"auto"`/`"radial"` or `"tangential"`) and the `grey_terms`
   argument are now documented.
 - [`krona_like_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/krona_like_pq.md)
-  now gives sections clearly distinct colours (each `color_by` value
-  gets its own hue and its descendants fan out across a hue band), draws
+  now gives sections clearly distinct colors (each `color_by` value gets
+  its own hue and its descendants fan out across a hue band), draws
   readable radial labels on the static sunburst and leaf-only
   top-anchored labels on the static treemap, and gains a `pattern`
   argument to overlay a faint grey dotted motif on alternate sections
@@ -283,7 +418,7 @@
   draws a comet / tapered-line plot for paired continuous measurements:
   a linewidth-tapered segment (via
   [`ggforce::geom_link()`](https://ggforce.data-imaginist.com/reference/geom_link.html))
-  connects the start and end value for each unit, with optional colour,
+  connects the start and end value for each unit, with optional color,
   tip-point, and text labels; accepts a data frame or a phyloseq object.
 - [`community_sharing_barplot()`](https://adrientaudiere.github.io/ggplotpq/reference/community_sharing_barplot.md)
   displays the same pairwise community-similarity metrics as
@@ -305,7 +440,7 @@
 - [`gg_bubbles_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/gg_bubbles_pq.md)
   produces a circle-packed bubble plot of taxa abundances (circle area ∝
   sequence count); supports circular and square layouts, optional
-  faceting by sample variable, taxon labelling, contour colour by
+  faceting by sample variable, taxon labelling, contour color by
   taxonomic rank, and pairwise `diff_contour` comparison panels;
   migrated from `comparpq` (single-phyloseq variant only — list_phyloseq
   support remains in
@@ -319,13 +454,13 @@
   `Picabia`, `Picasso`, `Levine2`, `Rattner`, `Sidhu`, `Hokusai2`,
   `Hokusai3`), migrated from `taxinfo`.
 - [`make_sharing_metric()`](https://adrientaudiere.github.io/ggplotpq/reference/make_sharing_metric.md)
-  builds a custom community-similarity metric definition (label, colour,
+  builds a custom community-similarity metric definition (label, color,
   function, format, and optional prep step and bounds) for use with
   [`community_sharing_plot()`](https://adrientaudiere.github.io/ggplotpq/reference/community_sharing_plot.md)
   and
   [`community_sharing_barplot()`](https://adrientaudiere.github.io/ggplotpq/reference/community_sharing_barplot.md).
 - [`palette_earthtones()`](https://adrientaudiere.github.io/ggplotpq/reference/palette_earthtones.md)
-  derives a colour palette from a geographic location
+  derives a color palette from a geographic location
   (latitude/longitude) by downloading satellite tiles via `maptiles` and
   clustering pixel RGB values with k-means; works around the
   latitude-invariance bug in upstream `earthtones` ≤ 0.2.0 by computing
@@ -390,7 +525,7 @@
   `palette` argument and a curated default of `Hokusai3`.
 - [`ternary_biomarker_pq()`](https://adrientaudiere.github.io/ggplotpq/reference/ternary_biomarker_pq.md)
   renders biomarker (or all) taxa on a three-group ternary diagram via
-  `ggtern`, sizing points by total abundance and colouring them by the
+  `ggtern`, sizing points by total abundance and coloring them by the
   group in which each taxon is most abundant; the biomarker detection
   itself (e.g. a LefSe analysis) is performed elsewhere and its taxa
   names are passed in.
@@ -400,7 +535,7 @@
   abundance across groups; uses standard de Finetti coordinates
   (Wikipedia: Ternary plot) implemented fresh in ggplot2 without any
   external dependency; supports group-level labels, optional grid,
-  colour-by taxonomic rank, and three size mappings (`abundance`,
+  color-by taxonomic rank, and three size mappings (`abundance`,
   `log2_abundance`, `equal`). Samples with `NA` group values are
   automatically dropped.
 - [`theme_idest()`](https://adrientaudiere.github.io/ggplotpq/reference/theme_idest.md)
