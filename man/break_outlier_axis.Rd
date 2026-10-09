@@ -53,7 +53,7 @@ the cluster boundary from being clipped.}
 }
 \value{
 A modified ggplot object with axis breaks, or a spec object (when
-\code{p = NULL}). Note: \link{ggbreak} wraps the plot in a custom grid layout;
+\code{p = NULL}). Note: \link[ggbreak:ggbreak]{ggbreak} wraps the plot in a custom grid layout;
 adding further ggplot2 layers after \code{break_outlier_axis()} may behave
 unexpectedly.
 }

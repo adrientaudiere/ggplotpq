@@ -123,7 +123,6 @@ wrapping labels instead.
 }
 
 \examples{
-\donttest{
 df <- data.frame(
   sample = paste0("Site_forest_", sprintf("\%02d", 1:12)),
   reads = c(120, 145, 110, 130, 150, 90, 160, 135, 128, 142, 99, 117)
@@ -133,7 +132,6 @@ p <- ggplot2::ggplot(df, ggplot2::aes(x = sample, y = reads)) +
 
 p_fit <- resize_fonts(p, width = 150, height = 80, units = "mm")
 attr(p_fit, "font_scale")
-}
 
 \dontrun{
 # In a Quarto chunk, the size comes from the chunk options:
