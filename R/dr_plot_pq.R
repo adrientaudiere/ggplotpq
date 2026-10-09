@@ -17,7 +17,8 @@
 #' re-export of [MiscMetabar::tsne_pq()]; [umato_pq()] and [pacmap_pq()] call
 #' Python through `reticulate`); the UMAP panel uses [MiscMetabar::umap_pq()];
 #' the MDS and NMDS panels use [phyloseq::ordinate()] on the distance given
-#' by `distance`.
+#' by `distance`. Taxa with zero counts are dropped first, so the NMDS species
+#' scores are not undefined when `physeq` is a sparse subset.
 #'
 #' @param physeq (required) A [phyloseq::phyloseq-class] object with an
 #'   `otu_table` and `sample_data`.
@@ -168,6 +169,7 @@ dr_plot_pq <- function(
       "{.arg physeq} must have at least 5 samples for a dimension-reduction comparison."
     )
   }
+  physeq <- phyloseq::prune_taxa(phyloseq::taxa_sums(physeq) > 0, physeq)
 
   set.seed(seed)
 

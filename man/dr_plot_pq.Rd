@@ -83,7 +83,8 @@ The t-SNE, UMATO and PaCMAP panels come from \code{ggplotpq} (\code{\link[MiscMe
 re-export of \code{\link[MiscMetabar:tsne_pq]{MiscMetabar::tsne_pq()}}; \code{\link[=umato_pq]{umato_pq()}} and \code{\link[=pacmap_pq]{pacmap_pq()}} call
 Python through \code{reticulate}); the UMAP panel uses \code{\link[MiscMetabar:umap_pq]{MiscMetabar::umap_pq()}};
 the MDS and NMDS panels use \code{\link[phyloseq:ordinate]{phyloseq::ordinate()}} on the distance given
-by \code{distance}.
+by \code{distance}. Taxa with zero counts are dropped first, so the NMDS species
+scores are not undefined when \code{physeq} is a sparse subset.
 }
 \details{
 No transformation is done inside the function: rarefy or transform
