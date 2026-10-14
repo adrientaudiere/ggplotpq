@@ -60,8 +60,17 @@ test_that("comet_pq wide format aborts on missing column", {
 })
 
 test_that("comet_pq long format returns a ggplot", {
-  p <- comet_pq(df_long, x = "xv", y = "yv", modality = "time", id = "id")
+  p <- comet_pq(df_long, x = "xv", y = "yv", fact = "time", id = "id")
   expect_s3_class(p, "ggplot")
+})
+
+test_that("comet_pq deprecates modality in favour of fact", {
+  p_fact <- comet_pq(df_long, x = "xv", y = "yv", fact = "time", id = "id")
+  lifecycle::expect_deprecated(
+    p_mod <- comet_pq(df_long, x = "xv", y = "yv", modality = "time", id = "id")
+  )
+  expect_s3_class(p_mod, "ggplot")
+  expect_identical(p_fact$data, p_mod$data)
 })
 
 test_that("comet_pq long format works with color_by and label_by", {
@@ -69,7 +78,7 @@ test_that("comet_pq long format works with color_by and label_by", {
     df_long,
     x = "xv",
     y = "yv",
-    modality = "time",
+    fact = "time",
     id = "id",
     color_by = "grp",
     label_by = "id"
@@ -77,18 +86,18 @@ test_that("comet_pq long format works with color_by and label_by", {
   expect_s3_class(p, "ggplot")
 })
 
-test_that("comet_pq long format aborts if modality is not ordered", {
+test_that("comet_pq long format aborts if fact is not ordered", {
   df_bad <- df_long
   df_bad$time <- factor(df_bad$time, ordered = FALSE)
   expect_error(
-    comet_pq(df_bad, x = "xv", y = "yv", modality = "time", id = "id"),
+    comet_pq(df_bad, x = "xv", y = "yv", fact = "time", id = "id"),
     "ordered factor"
   )
 })
 
 test_that("comet_pq long format aborts if id/x/y are missing", {
   expect_error(
-    comet_pq(df_long, x = "xv", y = "yv", modality = "time"),
+    comet_pq(df_long, x = "xv", y = "yv", fact = "time"),
     "id"
   )
 })
@@ -105,7 +114,7 @@ test_that("comet_pq aborts if both interfaces are mixed", {
       x_end = "xv",
       y_start = "yv",
       y_end = "yv",
-      modality = "time",
+      fact = "time",
       id = "id"
     ),
     "Cannot mix"
@@ -117,7 +126,7 @@ test_that("comet_pq label_nudge shifts tip labels", {
     df_long,
     x = "xv",
     y = "yv",
-    modality = "time",
+    fact = "time",
     id = "id",
     label_by = "id",
     label_nudge_x = 0.3,
@@ -131,7 +140,7 @@ test_that("comet_pq step_label_by adds node labels in long format", {
     df_long,
     x = "xv",
     y = "yv",
-    modality = "time",
+    fact = "time",
     id = "id",
     step_label_by = "time",
     step_label_size = 2
@@ -146,7 +155,7 @@ test_that("comet_pq na_rm drops rows with NA in used columns", {
     df_na,
     x = "xv",
     y = "yv",
-    modality = "time",
+    fact = "time",
     id = "id",
     na_rm = TRUE
   )
@@ -155,7 +164,7 @@ test_that("comet_pq na_rm drops rows with NA in used columns", {
     df_na,
     x = "xv",
     y = "yv",
-    modality = "time",
+    fact = "time",
     id = "id",
     na_rm = FALSE
   )

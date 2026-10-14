@@ -12,7 +12,7 @@ comet_pq(
   y_end = NULL,
   x = NULL,
   y = NULL,
-  modality = NULL,
+  fact = NULL,
   id = NULL,
   color_by = NULL,
   label_by = NULL,
@@ -28,7 +28,8 @@ comet_pq(
   tip_size = 3,
   na_rm = TRUE,
   xlab = NULL,
-  ylab = NULL
+  ylab = NULL,
+  modality = lifecycle::deprecated()
 )
 }
 \arguments{
@@ -46,33 +47,33 @@ the comet origin and tip.}
 
 \item{y}{(long format) Column name for the y values.}
 
-\item{modality}{(long format) Column name of an \strong{ordered factor} (2+
+\item{fact}{(long format) Column name of an \strong{ordered factor} (2+
 levels) whose levels define the comet steps. Each level is one node of the
 path; the taper runs from the first level (thin) to the last (thick).
 Must be an ordered factor — use \code{factor(..., ordered = TRUE)}. Each \code{id}
 must be present at two or more distinct levels; duplicate
-\verb{(id, modality_level)} combinations are not allowed — aggregate first
-if needed (see example 5).}
+\verb{(id, fact_level)} combinations are not allowed — aggregate first
+if needed (see example 5). Formerly \code{modality}.}
 
 \item{id}{(long format) Column name identifying each observational unit.
 Rows sharing the same \code{id} are connected into one comet path.
 \strong{Nesting requirement:} each \code{id} value must appear at two or more
-\emph{distinct} \code{modality} levels; units with fewer are dropped with a warning.
-If your natural identifier only appears at a single modality level (e.g.
-individuals each sampled at only one time point), the id and modality
+\emph{distinct} \code{fact} levels; units with fewer are dropped with a warning.
+If your natural identifier only appears at a single \code{fact} level (e.g.
+individuals each sampled at only one time point), the \code{id} and \code{fact}
 roles may need to be swapped or the data aggregated. See example 5 for
 an aggregation-based restructuring using \code{aggregate()}.}
 
 \item{color_by}{(character, default \code{NULL}) Optional column name to map to
 the colour of the comet. In long format, two behaviours are possible:
-if \code{color_by} names the same column as \code{modality}, colour interpolates
+if \code{color_by} names the same column as \code{fact}, colour interpolates
 continuously along each path as a viridis gradient (tail = dark, tip =
 bright), with level names shown on the colour legend; otherwise, colour
 is held constant within each comet (first value per \code{id}), so that
 \code{color_by} can identify or categorise each comet.}
 
 \item{label_by}{(character, default \code{NULL}) Optional column name whose
-values label the comet tip (last modality level in long format; \code{x_end}
+values label the comet tip (last \code{fact} level in long format; \code{x_end}
 position in wide format).}
 
 \item{label_size}{(numeric, default \code{3}) Text size for tip labels.}
@@ -82,8 +83,8 @@ vertical offset (in data units) applied to the tip label position. Use
 these to move the label away from the tip point so it does not overlap.}
 
 \item{step_label_by}{(character, default \code{NULL}) Long-format only. Column
-name whose values are drawn as text at every modality step (node) along
-the path. Typically the \code{modality} column itself, to annotate each node
+name whose values are drawn as text at every \code{fact} step (node) along
+the path. Typically the \code{fact} column itself, to annotate each node
 with its level name. Ignored in wide format.}
 
 \item{step_label_size}{(numeric, default \code{2}) Text size for step labels.}
@@ -103,10 +104,12 @@ drawn at the tip (end/last level) of each comet.}
 \item{tip_size}{(numeric, default \code{3}) Size of the tip point.}
 
 \item{na_rm}{(logical, default \code{TRUE}) If \code{TRUE}, rows with \code{NA} in any of
-the columns used by the plot (coordinates, \code{modality}, \code{id}, \code{color_by},
+the columns used by the plot (coordinates, \code{fact}, \code{id}, \code{color_by},
 \code{label_by}, \code{step_label_by}) are silently dropped before plotting.}
 
 \item{xlab, ylab}{(character, default \code{NULL}) Axis labels.}
+
+\item{modality}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Use \code{fact} instead.}
 }
 \value{
 A \link[ggplot2:ggplot]{ggplot2::ggplot} object.
@@ -126,13 +129,13 @@ the narrow end is the origin and the wide end is the destination.
 \strong{Vocabulary}
 \itemize{
 \item A \strong{comet} is the full path drawn for one observational unit. It is
-defined by a sequence of \verb{(x, y, modality_level)} observations sharing
+defined by a sequence of \verb{(x, y, fact_level)} observations sharing
 the same \code{id} value. Each \code{id} level defines exactly one comet.
 \item A \strong{step} is one node (x, y) along a comet, corresponding to one level
-of the \code{modality} ordered factor. Duplicate modality levels within the
+of the \code{fact} ordered factor. Duplicate \code{fact} levels within the
 same \code{id} are not allowed.
-\item The \strong{tail} is the first step (smallest modality level); the \strong{tip} is
-the last step (largest modality level). The path tapers from thin at the
+\item The \strong{tail} is the first step (smallest \code{fact} level); the \strong{tip} is
+the last step (largest \code{fact} level). The path tapers from thin at the
 tail to thick at the tip.
 }
 
@@ -141,8 +144,8 @@ Two interfaces are supported:
 \item \strong{Wide format} (\code{x_start}, \code{x_end}, \code{y_start}, \code{y_end}): each row in
 \code{data} holds start and end coordinates. Uses \code{\link[ggforce:geom_link]{ggforce::geom_link()}} to
 draw a single tapered segment per row.
-\item \strong{Long format} (\code{x}, \code{y}, \code{modality}, \code{id}): each row holds one
-measurement for one observational unit at one modality level. \code{modality}
+\item \strong{Long format} (\code{x}, \code{y}, \code{fact}, \code{id}): each row holds one
+measurement for one observational unit at one \code{fact} level. \code{fact}
 must be an ordered factor with 2 or more levels; \code{id} identifies each
 unit. Uses \code{\link[ggforce:geom_link2]{ggforce::geom_link2()}} so that linewidth tapers continuously
 across all steps (not independently per segment), enabling timeline-style
@@ -174,7 +177,7 @@ comet_pq(df,
   color_by = "modality"
 )
 
-# 2. Long format: ordered factor modality for multi-step timeline comets
+# 2. Long format: ordered factor fact for multi-step timeline comets
 df_long <- data.frame(
   id    = rep(letters[1:4], each = 3),
   time  = factor(
@@ -188,7 +191,7 @@ df_long <- data.frame(
 )
 comet_pq(df_long,
   x = "x_val", y = "y_val",
-  modality = "time", id = "id",
+  fact = "time", id = "id",
   color_by = "grp",
   label_by = "id", label_nudge_x = 0.05,
   step_label_by = "time", step_label_size = 2
@@ -197,7 +200,7 @@ comet_pq(df_long,
 \donttest{
 # 3. From a phyloseq object: fungal diversity along tree height
 #    (tail = Low, tip = High). In data_fungi_mini each tree is sampled at
-#    up to three heights, making height the natural ordered modality.
+#    up to three heights, making height the natural ordered factor.
 data(data_fungi_mini, package = "MiscMetabar")
 df_pq <- MiscMetabar::psmelt_samples_pq(data_fungi_mini)
 df_pq$Height_ord <- factor(
@@ -206,7 +209,7 @@ df_pq$Height_ord <- factor(
   ordered = TRUE
 )
 # One tree is sampled twice at the same height, and comet_pq requires
-# exactly one row per (id, modality) step, so aggregate first.
+# exactly one row per (id, fact) step, so aggregate first.
 df_ex3 <- aggregate(
   cbind(Hill_0, Abundance_log10) ~ Tree_name + Height_ord,
   data = df_pq[!is.na(df_pq$Tree_name) & !is.na(df_pq$Height_ord), ],
@@ -215,13 +218,13 @@ df_ex3 <- aggregate(
 comet_pq(
   df_ex3,
   x = "Hill_0", y = "Abundance_log10",
-  modality = "Height_ord", id = "Tree_name",
+  fact = "Height_ord", id = "Tree_name",
   color_by = "Height_ord", label_by = "Tree_name",
   label_nudge_x = 0.05
 )
 
-# 4. Same height modality, but constant colour per comet (by sampling Time).
-#    comet_pq requires exactly one row per (id, modality) step, so
+# 4. Same height factor, but constant colour per comet (by sampling Time).
+#    comet_pq requires exactly one row per (id, fact) step, so
 #    aggregate first to handle any trees sampled twice at the same height.
 df_ex4 <- aggregate(
   cbind(Hill_0, Abundance_log10) ~ Tree_name + Height_ord,
@@ -235,13 +238,13 @@ df_ex4$Time_chr <- as.character(
 comet_pq(
   df_ex4,
   x = "Hill_0", y = "Abundance_log10",
-  modality = "Height_ord", id = "Tree_name",
+  fact = "Height_ord", id = "Tree_name",
   color_by = "Time_chr", label_by = "Tree_name",
   label_nudge_x = 0.05
 )
 # 5. Gradient by time: each height (Low/Middle/High) recurs at all four
 #    time points, making Height_ord the natural id for time-step comets.
-#    color_by must equal modality to trigger the viridis gradient.
+#    color_by must equal fact to trigger the viridis gradient.
 df_pq$Time_ord <- factor(
   df_pq$Time, levels = c("0", "5", "10", "15"), ordered = TRUE
 )
@@ -253,7 +256,7 @@ df_ex5 <- aggregate(
 comet_pq(
   df_ex5,
   x = "Hill_0", y = "Abundance_log10",
-  modality = "Time_ord", id = "Height_ord",
+  fact = "Time_ord", id = "Height_ord",
   color_by = "Time_ord",
   label_by = "Height_ord",
   label_nudge_x = 0.05

@@ -29,6 +29,25 @@ It is deliberately **not** for cross-package multi-`phyloseq` comparators
 `netaipq`). Genuinely new analysis methods belong in `netaipq`; `ggplotpq` may
 render their plots, but does not host the analysis.
 
+## Parameter conventions: `fact`, `color_by`, and `facet_by`
+
+Unlike `MiscMetabar`, where a single grouping argument sometimes controls data
+grouping, color aesthetics, and faceting at the same time, `ggplotpq` separates
+these three roles into distinct parameters:
+
+- **`fact`** (and **`bifactor`** for a secondary two-level factor): the primary
+  grouping or ordering column in `sample_data()` (or in a long data frame) that
+  defines the statistical or geometric structure of the plot — for example, the
+  shared-community nodes in `community_sharing_plot()`, the vertices in
+  `ternary_pq()`, or the ordered step sequence along a path in `comet_pq()`.
+- **`color_by`** (alongside `color_rank` for `tax_table()` ranks and
+  `color_fac` for `sample_data()` columns): the column mapped to the color or
+  fill aesthetic. Keeping `color_by` independent of `fact` makes it possible to
+  structure a plot by one variable (e.g. `fact = "Height_ord"` in `comet_pq()`)
+  while coloring by another (`color_by = "Time"`).
+- **`facet_by`**: the variable used to split the figure into faceted panels
+  (e.g. `gg_bubbles_pq(physeq, facet_by = "Height")`).
+
 ## Installation
 
 ```{r, eval = FALSE}

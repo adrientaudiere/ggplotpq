@@ -16,13 +16,13 @@ utils::globalVariables("index")
 #' **Vocabulary**
 #'
 #' - A **comet** is the full path drawn for one observational unit. It is
-#'   defined by a sequence of `(x, y, modality_level)` observations sharing
+#'   defined by a sequence of `(x, y, fact_level)` observations sharing
 #'   the same `id` value. Each `id` level defines exactly one comet.
 #' - A **step** is one node (x, y) along a comet, corresponding to one level
-#'   of the `modality` ordered factor. Duplicate modality levels within the
+#'   of the `fact` ordered factor. Duplicate `fact` levels within the
 #'   same `id` are not allowed.
-#' - The **tail** is the first step (smallest modality level); the **tip** is
-#'   the last step (largest modality level). The path tapers from thin at the
+#' - The **tail** is the first step (smallest `fact` level); the **tip** is
+#'   the last step (largest `fact` level). The path tapers from thin at the
 #'   tail to thick at the tip.
 #'
 #' Two interfaces are supported:
@@ -31,8 +31,8 @@ utils::globalVariables("index")
 #'   `data` holds start and end coordinates. Uses [ggforce::geom_link()] to
 #'   draw a single tapered segment per row.
 #'
-#' - **Long format** (`x`, `y`, `modality`, `id`): each row holds one
-#'   measurement for one observational unit at one modality level. `modality`
+#' - **Long format** (`x`, `y`, `fact`, `id`): each row holds one
+#'   measurement for one observational unit at one `fact` level. `fact`
 #'   must be an ordered factor with 2 or more levels; `id` identifies each
 #'   unit. Uses [ggforce::geom_link2()] so that linewidth tapers continuously
 #'   across all steps (not independently per segment), enabling timeline-style
@@ -55,38 +55,39 @@ utils::globalVariables("index")
 #'   the comet origin and tip.
 #' @param x (long format) Column name for the x values.
 #' @param y (long format) Column name for the y values.
-#' @param modality (long format) Column name of an **ordered factor** (2+
+#' @param fact (long format) Column name of an **ordered factor** (2+
 #'   levels) whose levels define the comet steps. Each level is one node of the
 #'   path; the taper runs from the first level (thin) to the last (thick).
 #'   Must be an ordered factor — use `factor(..., ordered = TRUE)`. Each `id`
 #'   must be present at two or more distinct levels; duplicate
-#'   `(id, modality_level)` combinations are not allowed — aggregate first
-#'   if needed (see example 5).
+#'   `(id, fact_level)` combinations are not allowed — aggregate first
+#'   if needed (see example 5). Formerly `modality`.
+#' @param modality `r lifecycle::badge("deprecated")` Use `fact` instead.
 #' @param id (long format) Column name identifying each observational unit.
 #'   Rows sharing the same `id` are connected into one comet path.
 #'   **Nesting requirement:** each `id` value must appear at two or more
-#'   *distinct* `modality` levels; units with fewer are dropped with a warning.
-#'   If your natural identifier only appears at a single modality level (e.g.
-#'   individuals each sampled at only one time point), the id and modality
+#'   *distinct* `fact` levels; units with fewer are dropped with a warning.
+#'   If your natural identifier only appears at a single `fact` level (e.g.
+#'   individuals each sampled at only one time point), the `id` and `fact`
 #'   roles may need to be swapped or the data aggregated. See example 5 for
 #'   an aggregation-based restructuring using `aggregate()`.
 #' @param color_by (character, default `NULL`) Optional column name to map to
 #'   the colour of the comet. In long format, two behaviours are possible:
-#'   if `color_by` names the same column as `modality`, colour interpolates
+#'   if `color_by` names the same column as `fact`, colour interpolates
 #'   continuously along each path as a viridis gradient (tail = dark, tip =
 #'   bright), with level names shown on the colour legend; otherwise, colour
 #'   is held constant within each comet (first value per `id`), so that
 #'   `color_by` can identify or categorise each comet.
 #' @param label_by (character, default `NULL`) Optional column name whose
-#'   values label the comet tip (last modality level in long format; `x_end`
+#'   values label the comet tip (last `fact` level in long format; `x_end`
 #'   position in wide format).
 #' @param label_size (numeric, default `3`) Text size for tip labels.
 #' @param label_nudge_x,label_nudge_y (numeric, default `0`) Horizontal and
 #'   vertical offset (in data units) applied to the tip label position. Use
 #'   these to move the label away from the tip point so it does not overlap.
 #' @param step_label_by (character, default `NULL`) Long-format only. Column
-#'   name whose values are drawn as text at every modality step (node) along
-#'   the path. Typically the `modality` column itself, to annotate each node
+#'   name whose values are drawn as text at every `fact` step (node) along
+#'   the path. Typically the `fact` column itself, to annotate each node
 #'   with its level name. Ignored in wide format.
 #' @param step_label_size (numeric, default `2`) Text size for step labels.
 #' @param alpha (numeric, default `1`) Transparency of the segments.
@@ -99,7 +100,7 @@ utils::globalVariables("index")
 #'   drawn at the tip (end/last level) of each comet.
 #' @param tip_size (numeric, default `3`) Size of the tip point.
 #' @param na_rm (logical, default `TRUE`) If `TRUE`, rows with `NA` in any of
-#'   the columns used by the plot (coordinates, `modality`, `id`, `color_by`,
+#'   the columns used by the plot (coordinates, `fact`, `id`, `color_by`,
 #'   `label_by`, `step_label_by`) are silently dropped before plotting.
 #' @param xlab,ylab (character, default `NULL`) Axis labels.
 #'
@@ -126,7 +127,7 @@ utils::globalVariables("index")
 #'   color_by = "modality"
 #' )
 #'
-#' # 2. Long format: ordered factor modality for multi-step timeline comets
+#' # 2. Long format: ordered factor fact for multi-step timeline comets
 #' df_long <- data.frame(
 #'   id    = rep(letters[1:4], each = 3),
 #'   time  = factor(
@@ -140,7 +141,7 @@ utils::globalVariables("index")
 #' )
 #' comet_pq(df_long,
 #'   x = "x_val", y = "y_val",
-#'   modality = "time", id = "id",
+#'   fact = "time", id = "id",
 #'   color_by = "grp",
 #'   label_by = "id", label_nudge_x = 0.05,
 #'   step_label_by = "time", step_label_size = 2
@@ -149,7 +150,7 @@ utils::globalVariables("index")
 #' \donttest{
 #' # 3. From a phyloseq object: fungal diversity along tree height
 #' #    (tail = Low, tip = High). In data_fungi_mini each tree is sampled at
-#' #    up to three heights, making height the natural ordered modality.
+#' #    up to three heights, making height the natural ordered factor.
 #' data(data_fungi_mini, package = "MiscMetabar")
 #' df_pq <- MiscMetabar::psmelt_samples_pq(data_fungi_mini)
 #' df_pq$Height_ord <- factor(
@@ -158,7 +159,7 @@ utils::globalVariables("index")
 #'   ordered = TRUE
 #' )
 #' # One tree is sampled twice at the same height, and comet_pq requires
-#' # exactly one row per (id, modality) step, so aggregate first.
+#' # exactly one row per (id, fact) step, so aggregate first.
 #' df_ex3 <- aggregate(
 #'   cbind(Hill_0, Abundance_log10) ~ Tree_name + Height_ord,
 #'   data = df_pq[!is.na(df_pq$Tree_name) & !is.na(df_pq$Height_ord), ],
@@ -167,13 +168,13 @@ utils::globalVariables("index")
 #' comet_pq(
 #'   df_ex3,
 #'   x = "Hill_0", y = "Abundance_log10",
-#'   modality = "Height_ord", id = "Tree_name",
+#'   fact = "Height_ord", id = "Tree_name",
 #'   color_by = "Height_ord", label_by = "Tree_name",
 #'   label_nudge_x = 0.05
 #' )
 #'
-#' # 4. Same height modality, but constant colour per comet (by sampling Time).
-#' #    comet_pq requires exactly one row per (id, modality) step, so
+#' # 4. Same height factor, but constant colour per comet (by sampling Time).
+#' #    comet_pq requires exactly one row per (id, fact) step, so
 #' #    aggregate first to handle any trees sampled twice at the same height.
 #' df_ex4 <- aggregate(
 #'   cbind(Hill_0, Abundance_log10) ~ Tree_name + Height_ord,
@@ -187,13 +188,13 @@ utils::globalVariables("index")
 #' comet_pq(
 #'   df_ex4,
 #'   x = "Hill_0", y = "Abundance_log10",
-#'   modality = "Height_ord", id = "Tree_name",
+#'   fact = "Height_ord", id = "Tree_name",
 #'   color_by = "Time_chr", label_by = "Tree_name",
 #'   label_nudge_x = 0.05
 #' )
 #' # 5. Gradient by time: each height (Low/Middle/High) recurs at all four
 #' #    time points, making Height_ord the natural id for time-step comets.
-#' #    color_by must equal modality to trigger the viridis gradient.
+#' #    color_by must equal fact to trigger the viridis gradient.
 #' df_pq$Time_ord <- factor(
 #'   df_pq$Time, levels = c("0", "5", "10", "15"), ordered = TRUE
 #' )
@@ -205,7 +206,7 @@ utils::globalVariables("index")
 #' comet_pq(
 #'   df_ex5,
 #'   x = "Hill_0", y = "Abundance_log10",
-#'   modality = "Time_ord", id = "Height_ord",
+#'   fact = "Time_ord", id = "Height_ord",
 #'   color_by = "Time_ord",
 #'   label_by = "Height_ord",
 #'   label_nudge_x = 0.05
@@ -221,7 +222,7 @@ comet_pq <- function(
   y_end = NULL,
   x = NULL,
   y = NULL,
-  modality = NULL,
+  fact = NULL,
   id = NULL,
   color_by = NULL,
   label_by = NULL,
@@ -237,12 +238,22 @@ comet_pq <- function(
   tip_size = 3,
   na_rm = TRUE,
   xlab = NULL,
-  ylab = NULL
+  ylab = NULL,
+  modality = lifecycle::deprecated()
 ) {
   if (!requireNamespace("ggforce", quietly = TRUE)) {
     cli::cli_abort(
       "Package {.pkg ggforce} is required. Install it with {.code install.packages('ggforce')}."
     )
+  }
+
+  if (lifecycle::is_present(modality)) {
+    lifecycle::deprecate_warn(
+      "0.2.0",
+      "comet_pq(modality=)",
+      "comet_pq(fact=)"
+    )
+    fact <- modality
   }
 
   if (inherits(data, "phyloseq")) {
@@ -254,15 +265,15 @@ comet_pq <- function(
     cli::cli_abort("{.arg data} must be a data.frame or phyloseq object.")
   }
 
-  use_modality <- !is.null(modality)
+  use_fact <- !is.null(fact)
   use_wide <- !is.null(x_start) &&
     !is.null(x_end) &&
     !is.null(y_start) &&
     !is.null(y_end)
 
   if (na_rm) {
-    if (use_modality) {
-      used_cols <- c(x, y, modality, id, color_by, label_by, step_label_by)
+    if (use_fact) {
+      used_cols <- c(x, y, fact, id, color_by, label_by, step_label_by)
     } else {
       used_cols <- c(x_start, x_end, y_start, y_end, color_by, label_by)
     }
@@ -272,18 +283,18 @@ comet_pq <- function(
     }
   }
 
-  if (!use_modality && !use_wide) {
+  if (!use_fact && !use_wide) {
     cli::cli_abort(
       c(
         "Must supply one of:",
         "i" = "Wide format: {.arg x_start}, {.arg x_end}, {.arg y_start}, {.arg y_end}.",
-        "i" = "Long format: {.arg x}, {.arg y}, {.arg modality}, {.arg id}."
+        "i" = "Long format: {.arg x}, {.arg y}, {.arg fact}, {.arg id}."
       )
     )
   }
-  if (use_modality && use_wide) {
+  if (use_fact && use_wide) {
     cli::cli_abort(
-      "Cannot mix wide-format ({.arg x_start}/{.arg x_end}/...) and long-format ({.arg modality}/{.arg id}/...) arguments."
+      "Cannot mix wide-format ({.arg x_start}/{.arg x_end}/...) and long-format ({.arg fact}/{.arg id}/...) arguments."
     )
   }
 
@@ -297,75 +308,75 @@ comet_pq <- function(
     cli::cli_abort("Column {.val {step_label_by}} not found in {.arg data}.")
   }
 
-  if (use_modality) {
+  if (use_fact) {
     if (is.null(x) || is.null(y) || is.null(id)) {
       cli::cli_abort(
-        "When using {.arg modality}, you must also supply {.arg x}, {.arg y}, and {.arg id}."
+        "When using {.arg fact}, you must also supply {.arg x}, {.arg y}, and {.arg id}."
       )
     }
-    needed <- c(x, y, modality, id)
+    needed <- c(x, y, fact, id)
     missing_cols <- needed[!needed %in% names(data)]
     if (length(missing_cols) > 0) {
       cli::cli_abort(
         "Column{?s} not found in {.arg data}: {.val {missing_cols}}"
       )
     }
-    if (!is.ordered(data[[modality]])) {
+    if (!is.ordered(data[[fact]])) {
       cli::cli_abort(
         c(
-          "{.arg modality} column {.val {modality}} must be an ordered factor.",
-          "i" = "Use {.code factor({modality}, levels = ..., ordered = TRUE)} to create one."
+          "{.arg fact} column {.val {fact}} must be an ordered factor.",
+          "i" = "Use {.code factor({fact}, levels = ..., ordered = TRUE)} to create one."
         )
       )
     }
-    n_levels <- nlevels(data[[modality]])
+    n_levels <- nlevels(data[[fact]])
     if (n_levels < 2) {
-      cli::cli_abort("{.arg modality} must have at least 2 levels.")
+      cli::cli_abort("{.arg fact} must have at least 2 levels.")
     }
 
-    data <- data[order(data[[id]], as.numeric(data[[modality]])), ]
+    data <- data[order(data[[id]], as.numeric(data[[fact]])), ]
 
     id_level_counts <- tapply(
-      as.character(data[[modality]]),
+      as.character(data[[fact]]),
       data[[id]],
       function(v) length(unique(v))
     )
     single_point_ids <- names(id_level_counts)[id_level_counts < 2]
     if (length(single_point_ids) > 0) {
       cli::cli_warn(c(
-        "{length(single_point_ids)} {.arg id} value{?s} dropped: fewer than 2 distinct {.arg modality} levels.",
-        "i" = "Each comet must span \u22652 modality levels. If your natural id only appears at one level (e.g. individuals each sampled at a single time point), the {.arg id} and {.arg modality} roles may need to be swapped or the data aggregated.",
+        "{length(single_point_ids)} {.arg id} value{?s} dropped: fewer than 2 distinct {.arg fact} levels.",
+        "i" = "Each comet must span \u22652 fact levels. If your natural id only appears at one level (e.g. individuals each sampled at a single time point), the {.arg id} and {.arg fact} roles may need to be swapped or the data aggregated.",
         "i" = "See {.code ?comet_pq} example 5 for an {.fn aggregate}-based restructuring.",
         "i" = "Dropped {.arg id} value{?s}: {.val {single_point_ids}}"
       ))
       data <- data[!data[[id]] %in% single_point_ids, ]
     }
 
-    dup_key <- interaction(data[[id]], data[[modality]], drop = TRUE)
+    dup_key <- interaction(data[[id]], data[[fact]], drop = TRUE)
     if (anyDuplicated(dup_key)) {
       cli::cli_abort(c(
-        "Duplicate {.arg modality} levels found within one or more {.arg id} groups.",
-        "i" = "Each step of a comet must have exactly one row per ({.arg id}, {.arg modality}) combination.",
+        "Duplicate {.arg fact} levels found within one or more {.arg id} groups.",
+        "i" = "Each step of a comet must have exactly one row per ({.arg id}, {.arg fact}) combination.",
         "i" = "Aggregate duplicates first \u2014 see {.code ?comet_pq} example 5, or use:",
-        "i" = "{.code dplyr::summarise(dplyr::across(c({.val {x}}, {.val {y}}), mean), .by = c({.val {id}}, {.val {modality}}))}"
+        "i" = "{.code dplyr::summarise(dplyr::across(c({.val {x}}, {.val {y}}), mean), .by = c({.val {id}}, {.val {fact}}))}"
       ))
     }
 
     # Linewidth index: 0 at the tail (first level), 1 at the tip (last level).
-    data$.lw_index <- (as.numeric(data[[modality]]) - 1) / (n_levels - 1)
+    data$.lw_index <- (as.numeric(data[[fact]]) - 1) / (n_levels - 1)
 
     # Colour index (global, same scale as .lw_index): used when color_by ==
-    # modality so the gradient reflects the actual modality position rather
+    # fact so the gradient reflects the actual fact position rather
     # than a per-comet-normalised value.
     data$.color_index <- data$.lw_index
 
     # Two colour modes for long format:
-    # - gradient (color_by == modality): .color_index mapped to viridis_c so
+    # - gradient (color_by == fact): .color_index mapped to viridis_c so
     #   the colour transitions continuously along each comet path.
-    # - constant (color_by != modality): a single colour per id is used;
+    # - constant (color_by != fact): a single colour per id is used;
     #   geom_link2 would otherwise blend discrete colours across nodes.
-    use_gradient_color <- !is.null(color_by) && color_by == modality
-    use_const_color <- !is.null(color_by) && color_by != modality
+    use_gradient_color <- !is.null(color_by) && color_by == fact
+    use_const_color <- !is.null(color_by) && color_by != fact
     if (use_const_color) {
       first_color <- tapply(
         as.character(data[[color_by]]),
@@ -418,15 +429,15 @@ comet_pq <- function(
       p <- p +
         ggplot2::scale_color_viridis_c(
           breaks = lw_breaks,
-          labels = levels(data[[modality]]),
-          name = modality
+          labels = levels(data[[fact]]),
+          name = fact
         )
     } else if (use_const_color) {
       p <- p + ggplot2::scale_color_discrete(name = color_by)
     }
 
-    last_level <- levels(data[[modality]])[n_levels]
-    tip_data <- data[data[[modality]] == last_level, ]
+    last_level <- levels(data[[fact]])[n_levels]
+    tip_data <- data[data[[fact]] == last_level, ]
 
     if (add_tip_point) {
       aes_pt <- ggplot2::aes(x = .data[[x]], y = .data[[y]])

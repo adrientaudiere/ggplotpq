@@ -22,6 +22,26 @@ Genuinely new analysis methods (PLS-DA, aPCoA, Zeta-diversity, LefSe,
 ALDEx2 sensitivity, etc.) belong in ‘netaipq’ — `ggplotpq` may still
 render their plots, but the analysis wrapper itself does not live here.
 
+## Parameter conventions: `fact`, `color_by`, and `facet_by`
+
+Unlike `MiscMetabar`, where a single grouping argument sometimes drives
+data aggregation, color, and faceting simultaneously, `ggplotpq`
+strictly separates three orthogonal roles:
+
+- **`fact`** (and **`bifactor`** for a secondary 2-level grouping): the
+  primary `sample_data()` grouping or ordering variable that structures
+  the data or geometry (e.g. groups in `community_sharing_plot()`,
+  `ternary_pq()`, `plot_samples_dist2ref_pq()`, or the ordered step
+  factor in `comet_pq()`).
+- **`color_by`** (for plain data-frame columns, alongside
+  `color_rank` for `tax_table()` ranks and `color_fac` for
+  `sample_data()` variables): the variable mapped to the color/fill
+  aesthetic, which may differ from `fact` (for instance, `comet_pq()`
+  can step along `fact = "Height_ord"` while coloring each comet by
+  `color_by = "Time_chr"`).
+- **`facet_by`**: the `sample_data()` variable used to split the plot
+  into small multiples (e.g. in `gg_bubbles_pq()`).
+
 ## Installation
 
 `r{eval = FALSE} # install.packages("devtools") devtools::install_github("adrientaudiere/ggplotpq")`
