@@ -37,8 +37,9 @@
 #'   "nmds")`) Which panels to draw. Whatever the order of the vector, the
 #'   panels are always arranged in three fixed family columns — **Local**
 #'   (UMAP, t-SNE), **Global** (MDS, NMDS) and **Local/Global trade-off**
-#'   (UMATO, PaCMAP) — each announced by a column header, so a missing
-#'   technique leaves an empty cell in its family column. Use a subset to
+#'   (UMATO, PaCMAP) — each announced by a column header. Panels stack in
+#'   their family column in that order, so one technique per family gives a
+#'   single row of panels. Use a subset to
 #'   skip techniques whose backend is unavailable (e.g. the Python ones) or
 #'   to speed up a quick look.
 #' @param n_neighbors (int, default 15) Number of neighbours for the
@@ -380,7 +381,14 @@ dr_plot_pq <- function(
     logical(1L)
   )
   n_cols <- sum(used_fams)
-  grid <- matrix("#", nrow = 3, ncol = 2 * n_cols - 1)
+  # panels stack inside a family column in slot order, so one technique per
+  # family gives a single row of panels (no empty cells)
+  n_rows <- max(vapply(
+    names(slots)[used_fams],
+    function(fam) length(intersect(names(slots[[fam]]), techniques)),
+    integer(1L)
+  ))
+  grid <- matrix("#", nrow = 1 + n_rows, ncol = 2 * n_cols - 1)
   plot_letters <- LETTERS[(n_cols + 1):(n_cols + length(techniques))]
   # place title cells on the first row
   for (j in seq_len(n_cols)) {
@@ -391,9 +399,8 @@ dr_plot_pq <- function(
   pos <- 1L
   for (fam in names(slots)[used_fams]) {
     fam_techs <- intersect(names(slots[[fam]]), techniques)
-    for (tech in fam_techs) {
-      row <- slots[[fam]][[tech]]
-      grid[row + 1, 2 * pos - 1] <- row_of_letter[[tech]]
+    for (k in seq_along(fam_techs)) {
+      grid[k + 1, 2 * pos - 1] <- row_of_letter[[fam_techs[k]]]
     }
     pos <- pos + 1
   }
@@ -428,7 +435,7 @@ dr_plot_pq <- function(
       list(
         design = grid_str,
         # slim header row so the family titles do not push the panels down
-        heights = c(0.08, 1, 1),
+        heights = c(0.08, rep(1, n_rows)),
         # narrow spacer columns between the family columns
         widths = ifelse(seq_len(ncol(grid)) %% 2 == 1, 1, 0.05),
         guides = "collect"

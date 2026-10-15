@@ -38,8 +38,9 @@ NMDS. Not used by the count-matrix techniques (UMAP, UMATO, PaCMAP).}
 \item{techniques}{(default \code{c("tsne", "umap", "umato", "pacmap", "mds", "nmds")}) Which panels to draw. Whatever the order of the vector, the
 panels are always arranged in three fixed family columns — \strong{Local}
 (UMAP, t-SNE), \strong{Global} (MDS, NMDS) and \strong{Local/Global trade-off}
-(UMATO, PaCMAP) — each announced by a column header, so a missing
-technique leaves an empty cell in its family column. Use a subset to
+(UMATO, PaCMAP) — each announced by a column header. Panels stack in
+their family column in that order, so one technique per family gives a
+single row of panels. Use a subset to
 skip techniques whose backend is unavailable (e.g. the Python ones) or
 to speed up a quick look.}
 

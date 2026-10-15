@@ -119,3 +119,19 @@ test_that("dr_plot_pq validates its arguments", {
     "label"
   )
 })
+
+test_that("dr_plot_pq puts one technique per family on a single row", {
+  skip_on_cran()
+  skip_if_not_installed("MiscMetabar")
+  skip_if_not_installed("phyloseq")
+  data(data_fungi_mini, package = "MiscMetabar")
+
+  p <- dr_plot_pq(
+    prune_samples(sample_names(data_fungi_mini)[1:20], data_fungi_mini),
+    fact = "Height",
+    techniques = c("umap", "nmds")
+  )
+
+  design <- p$patches$layout$design
+  expect_equal(max(design$b), 2)
+})
